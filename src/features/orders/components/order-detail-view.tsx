@@ -74,7 +74,7 @@ export function OrderDetailView({ order }: { order: OrderDetail }) {
             <div className="flex flex-col gap-0.5 text-sm">
               <Link
                 to={customerHref(order.customer.user_id)}
-                className="font-medium hover:text-brand"
+                className="inline-flex font-medium hover:text-brand max-md:min-h-11 max-md:items-center"
               >
                 {order.customer.name}
               </Link>

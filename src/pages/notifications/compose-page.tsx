@@ -12,7 +12,7 @@ export function NotificationComposePage() {
     <section className="flex max-w-2xl flex-col gap-4">
       <Link
         to="/notifications"
-        className="inline-flex w-fit items-center gap-1 text-sm text-ink-muted hover:text-brand"
+        className="inline-flex w-fit items-center gap-1 text-sm text-ink-muted hover:text-brand max-md:min-h-11"
       >
         <ArrowRightIcon className="size-4" aria-hidden />
         {t.back}

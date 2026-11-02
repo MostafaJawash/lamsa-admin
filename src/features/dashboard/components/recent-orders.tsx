@@ -32,7 +32,7 @@ export function RecentOrders() {
               <div className="flex flex-col">
                 <Link
                   to={`/orders/${order.id}`}
-                  className="font-medium tabular-nums hover:text-brand"
+                  className="inline-flex font-medium tabular-nums hover:text-brand max-md:min-h-11 max-md:items-center"
                 >
                   #{order.id}
                 </Link>

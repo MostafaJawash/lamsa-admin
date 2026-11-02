@@ -88,7 +88,7 @@ export function CustomerDetailPage() {
     <section className="flex flex-col gap-4">
       <Link
         to="/customers"
-        className="inline-flex w-fit items-center gap-1 text-sm text-ink-muted hover:text-brand"
+        className="inline-flex w-fit items-center gap-1 text-sm text-ink-muted hover:text-brand max-md:min-h-11"
       >
         <ArrowRightIcon className="size-4" aria-hidden />
         {t.back}

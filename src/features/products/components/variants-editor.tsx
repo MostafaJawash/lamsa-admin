@@ -142,7 +142,7 @@ export function VariantsEditor({
                         <input
                           type="color"
                           aria-label={`${def.label}: ${t.colorHex}`}
-                          className="h-8 w-10 shrink-0 cursor-pointer rounded border border-line bg-transparent"
+                          className="h-8 w-10 shrink-0 cursor-pointer rounded border border-line bg-transparent max-md:h-11 max-md:w-11"
                           {...register(`${base}.options.${def.key}_hex`)}
                         />
                       ) : null}
@@ -151,7 +151,7 @@ export function VariantsEditor({
                 );
               })}
             </div>
-            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
+            <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
               <FormField
                 id={`${base}-price`}
                 label={t.price}
@@ -179,7 +179,7 @@ export function VariantsEditor({
                 />
               </FormField>
               {isExisting ? (
-                <div className="flex flex-col gap-1.5">
+                <div className="col-span-2 flex flex-col gap-1.5 sm:col-span-1">
                   <span className="text-sm font-medium">{t.stock}</span>
                   <div className="flex items-center gap-2">
                     <span className="tabular-nums">
@@ -220,7 +220,12 @@ export function VariantsEditor({
                   />
                 </FormField>
               )}
-              <FormField id={`${base}-sku`} label={t.sku} error={err("sku")}>
+              <FormField
+                id={`${base}-sku`}
+                label={t.sku}
+                error={err("sku")}
+                className={isExisting ? "col-span-2 sm:col-span-1" : undefined}
+              >
                 <Input
                   id={`${base}-sku`}
                   dir="ltr"

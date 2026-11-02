@@ -52,7 +52,7 @@ export function ImagePicker({ existing, disabled, onFiles }: Props) {
         type="button"
         disabled={disabled}
         onClick={() => input.current?.click()}
-        className="font-medium text-brand hover:underline"
+        className="font-medium text-brand hover:underline max-md:min-h-11"
       >
         {m.products.images.add}
       </button>

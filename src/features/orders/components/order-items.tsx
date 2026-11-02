@@ -40,7 +40,7 @@ export function OrderItems({ items }: { items: readonly OrderItem[] }) {
               {item.product_id !== null ? (
                 <Link
                   to={`/products/${item.product_id}/edit`}
-                  className="font-medium hover:text-brand"
+                  className="font-medium hover:text-brand max-md:py-2.5"
                 >
                   {item.name}
                 </Link>

@@ -36,7 +36,7 @@ export function AddressCard({ order }: { order: OrderDetail }) {
           href={order.map_url}
           target="_blank"
           rel="noopener noreferrer"
-          className="mt-1 inline-flex w-fit items-center gap-1 text-brand hover:underline"
+          className="mt-1 inline-flex w-fit items-center gap-1 text-brand hover:underline max-md:min-h-11"
         >
           <MapPinIcon className="size-4" aria-hidden />
           {t.openMap}

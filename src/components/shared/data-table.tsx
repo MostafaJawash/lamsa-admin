@@ -56,7 +56,7 @@ function RowCard<T>({
         <div className="flex items-start gap-3">
           {media ? <div className="shrink-0">{media.cell(row)}</div> : null}
           {title ? (
-            <div className="min-w-0 flex-1 text-base break-words [&_a]:inline-flex [&_a]:min-h-11 [&_a]:items-center [&_button]:min-h-11">
+            <div className="min-w-0 flex-1 text-base break-words [&_a]:inline-flex [&_a]:min-h-11 [&_a]:min-w-11 [&_a]:items-center [&_button]:min-h-11">
               {title.cell(row)}
             </div>
           ) : null}

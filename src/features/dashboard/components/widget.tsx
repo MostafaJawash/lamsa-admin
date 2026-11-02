@@ -40,7 +40,10 @@ export function Widget({
       <header className="flex items-center justify-between gap-2">
         <h2 className="font-semibold">{title}</h2>
         {viewAll ? (
-          <Link to={viewAll} className="text-sm text-brand hover:underline">
+          <Link
+            to={viewAll}
+            className="inline-flex text-sm text-brand hover:underline max-md:min-h-11 max-md:items-center"
+          >
             {m.dashboard.viewAll}
           </Link>
         ) : null}
