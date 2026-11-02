@@ -27,7 +27,9 @@ export function CategoriesTable({ nodes, loading, onDelete }: Props) {
   const columns: Column<CategoryRow>[] = [
     {
       key: "name",
+      mobile: "title",
       header: t.columns.name,
+      className: "min-w-44 whitespace-normal",
       cell: ({ node, depth }) => (
         <div className={cn("flex items-center gap-3", depth === 1 && "ps-8")}>
           {node.image ? (
@@ -85,6 +87,7 @@ export function CategoriesTable({ nodes, loading, onDelete }: Props) {
     },
     {
       key: "actions",
+      mobile: "actions",
       header: t.columns.actions,
       className: "w-28",
       cell: ({ node }) => (

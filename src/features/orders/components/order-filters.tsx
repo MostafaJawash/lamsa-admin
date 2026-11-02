@@ -42,7 +42,7 @@ function FilterSelect({
 }: FilterSelectProps) {
   return (
     <Select value={value} onValueChange={onValueChange}>
-      <SelectTrigger aria-label={label} className="w-44">
+      <SelectTrigger aria-label={label} className="w-full sm:w-44">
         <SelectValue />
       </SelectTrigger>
       <SelectContent>
@@ -88,7 +88,7 @@ export function OrderFilters({ params, onChange, onClear }: Props) {
           placeholder={t.search}
           aria-label={t.search}
           maxLength={100}
-          className="w-72"
+          className="w-full sm:w-72"
         />
         <FilterSelect
           label={t.status}
@@ -120,7 +120,7 @@ export function OrderFilters({ params, onChange, onClear }: Props) {
           value={params.from}
           max={params.to || undefined}
           onChange={(event) => onChange({ from: event.target.value })}
-          className="w-40"
+          className="w-full sm:w-40"
         />
         <Input
           type="date"
@@ -130,7 +130,7 @@ export function OrderFilters({ params, onChange, onClear }: Props) {
           value={params.to}
           min={params.from || undefined}
           onChange={(event) => onChange({ to: event.target.value })}
-          className="w-40"
+          className="w-full sm:w-40"
         />
         <FilterSelect
           label={t.sort}

@@ -27,6 +27,7 @@ export function BrandsTable({
   const columns: Column<Brand>[] = [
     {
       key: "logo",
+      mobile: "media",
       header: t.columns.logo,
       className: "w-16",
       cell: (brand) =>
@@ -43,6 +44,7 @@ export function BrandsTable({
     },
     {
       key: "name",
+      mobile: "title",
       header: t.columns.name,
       cell: (brand) => (
         <div className="flex items-center gap-2">
@@ -87,6 +89,7 @@ export function BrandsTable({
     },
     {
       key: "actions",
+      mobile: "actions",
       header: t.columns.actions,
       className: "w-28",
       cell: (brand) => (

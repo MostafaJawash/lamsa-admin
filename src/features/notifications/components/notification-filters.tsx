@@ -32,7 +32,7 @@ export function NotificationFilters({ params, onChange, onClear }: Props) {
           onChange({ status: value as ListParams["status"] })
         }
       >
-        <SelectTrigger aria-label={t.status} className="w-48">
+        <SelectTrigger aria-label={t.status} className="w-full sm:w-48">
           <SelectValue />
         </SelectTrigger>
         <SelectContent>
@@ -50,7 +50,7 @@ export function NotificationFilters({ params, onChange, onClear }: Props) {
           onChange({ audience: value as ListParams["audience"] })
         }
       >
-        <SelectTrigger aria-label={t.audience} className="w-48">
+        <SelectTrigger aria-label={t.audience} className="w-full sm:w-48">
           <SelectValue />
         </SelectTrigger>
         <SelectContent>

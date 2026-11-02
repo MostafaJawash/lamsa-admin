@@ -31,6 +31,7 @@ export function ProductsTable({
   const columns: Column<ProductListItem>[] = [
     {
       key: "image",
+      mobile: "media",
       header: t.columns.image,
       className: "w-16",
       cell: (item) =>
@@ -47,7 +48,9 @@ export function ProductsTable({
     },
     {
       key: "name",
+      mobile: "title",
       header: t.columns.name,
+      className: "min-w-44 whitespace-normal",
       cell: (item) => (
         <div className="flex flex-col">
           <Link
@@ -123,6 +126,7 @@ export function ProductsTable({
     },
     {
       key: "actions",
+      mobile: "actions",
       header: t.columns.actions,
       className: "w-36",
       cell: (item) => (

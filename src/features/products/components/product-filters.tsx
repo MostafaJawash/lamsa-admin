@@ -49,7 +49,7 @@ function FilterSelect({
 }: FilterSelectProps) {
   return (
     <Select value={value} onValueChange={onValueChange}>
-      <SelectTrigger aria-label={label} className="w-44">
+      <SelectTrigger aria-label={label} className="w-full sm:w-44">
         <SelectValue />
       </SelectTrigger>
       <SelectContent>
@@ -95,7 +95,7 @@ export function ProductFilters({ params, onChange, onClear }: Props) {
         placeholder={t.search}
         aria-label={t.search}
         maxLength={200}
-        className="w-60"
+        className="w-full sm:w-60"
       />
       <FilterSelect
         label={t.category}

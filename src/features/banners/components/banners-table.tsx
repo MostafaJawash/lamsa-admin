@@ -72,6 +72,7 @@ export function BannersTable({
   const columns: Column<Banner>[] = [
     {
       key: "image",
+      mobile: "media",
       header: t.columns.image,
       className: "w-28",
       cell: (banner) =>
@@ -88,7 +89,9 @@ export function BannersTable({
     },
     {
       key: "title",
+      mobile: "title",
       header: t.columns.title,
+      className: "min-w-44 whitespace-normal",
       cell: (banner) => (
         <div className="flex flex-col">
           <button
@@ -164,6 +167,7 @@ export function BannersTable({
     },
     {
       key: "actions",
+      mobile: "actions",
       header: t.columns.actions,
       className: "w-28",
       cell: (banner) => (

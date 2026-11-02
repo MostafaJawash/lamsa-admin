@@ -22,6 +22,7 @@ export function CustomersTable({ rows, loading, emptyMessage }: Props) {
   const columns: Column<Customer>[] = [
     {
       key: "name",
+      mobile: "title",
       header: t.columns.name,
       cell: (customer) => (
         <Link
@@ -90,6 +91,7 @@ export function CustomersTable({ rows, loading, emptyMessage }: Props) {
     },
     {
       key: "actions",
+      mobile: "actions",
       header: t.columns.actions,
       className: "w-16",
       cell: (customer) => (

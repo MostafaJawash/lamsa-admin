@@ -52,13 +52,13 @@ export function CustomerFilters({ params, onChange, onClear }: Props) {
         placeholder={t.search}
         aria-label={t.search}
         maxLength={100}
-        className="w-64"
+        className="w-full sm:w-64"
       />
       <Select
         value={params.status}
         onValueChange={(value) => onChange({ status: value as StatusFilter })}
       >
-        <SelectTrigger aria-label={t.status} className="w-44">
+        <SelectTrigger aria-label={t.status} className="w-full sm:w-44">
           <SelectValue />
         </SelectTrigger>
         <SelectContent>

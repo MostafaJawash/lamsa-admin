@@ -45,13 +45,19 @@ export function NotificationsTable({ rows, loading, emptyMessage }: Props) {
     },
     {
       key: "message",
+      mobile: "title",
       header: t.columns.message,
       cell: (n) => (
-        <Link to={`/notifications/${n.id}`} className="flex max-w-md flex-col">
-          <span className="truncate font-medium hover:text-brand">
+        <Link
+          to={`/notifications/${n.id}`}
+          className="flex max-w-md flex-col max-md:min-h-11 max-md:max-w-none max-md:justify-center"
+        >
+          <span className="truncate font-medium hover:text-brand max-md:whitespace-normal">
             {n.title}
           </span>
-          <span className="truncate text-xs text-ink-muted">{n.body}</span>
+          <span className="truncate text-xs text-ink-muted max-md:whitespace-normal">
+            {n.body}
+          </span>
         </Link>
       ),
     },

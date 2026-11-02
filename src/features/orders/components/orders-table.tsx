@@ -30,6 +30,7 @@ export function OrdersTable({
   const columns: Column<OrderSummary>[] = [
     {
       key: "number",
+      mobile: "title",
       header: t.columns.number,
       cell: (order) => (
         <Link
@@ -95,6 +96,7 @@ export function OrdersTable({
     },
     {
       key: "actions",
+      mobile: "actions",
       header: t.columns.actions,
       className: "w-16",
       cell: (order) => (
