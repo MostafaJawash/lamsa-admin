@@ -277,6 +277,56 @@ This is **both** a compose-and-send feature **and** a history, and the send is *
 - Unit and component tests use a **mocked `fetch`** only: nothing in them can reach a backend, so nothing can reach a device. They cover the phrase gate (disabled until it matches, exact payload, one request on a double click), the single-customer path, scheduling, the cooldown (including the unlock after 30 s) and the mutation-level guard.
 - **E2E (`e2e/notifications.spec.ts`) mocks the notifications API in the browser** (`page.route` fulfills every `/admin/notifications…` request itself and never calls `route.continue()`), so **no request to those endpoints reaches any backend, not even lamsa_test**. It proves the button stays disabled until the phrase is typed, the exact payload that would be sent, the preview and the 30 s lock. **It deliberately does not cover a real send:** `PUSH_BACKEND` of the running :8001 instance was not verified (the README's start command sets `log`, but the machine's `lamsa-backend/.env` says `firebase`), and being wrong would push to real phones. The banners e2e is real (banners cannot push).
 
+## Responsive layout (phone, tablet, desktop)
+
+The admin is Arabic/RTL throughout, and every screen works from 375px up. Staff mostly use it on a desktop, so the desktop layout is the reference and the phone layout is "complete and usable", not a redesign. Every action available on desktop is also reachable on a phone.
+
+### Breakpoints (Tailwind defaults)
+
+| Width                   | What changes                                                                                                                                                                            |
+| ----------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| below `md` (< 768px)    | Data tables become stacked cards. Buttons, inputs, selects, switches, checkbox/radio labels and in-card links are at least 44×44px (`max-md:` classes). Filter controls are full width. |
+| `md`-`lg` (768-1023px)  | Tables again, scrolling inside their own container with the actions column pinned. Compact desktop sizing. Sidebar still behind the hamburger.                                          |
+| `lg` and up (>= 1024px) | The fixed 240px sidebar replaces the hamburger menu.                                                                                                                                    |
+
+`sm` (640px) is used only for two-column forms and dialog footers (stacked below it).
+
+### Sidebar
+
+`Sidebar` (`components/layout/sidebar.tsx`) is the visible desktop sidebar from `lg`. Below that, the topbar shows a hamburger that opens the same `SidebarNav` in a sheet from the inline-start edge (right in RTL); choosing a link closes it. The sidebar and the sheet render the same `navItems`, and a test asserts that.
+
+### Tables: stacked cards below `md`
+
+All seven lists (products, orders, customers, categories, brands, banners, notification history) use `DataTable`. Below `md` it renders one card per row **from the same column definitions** as the table, so the data and every action are identical by construction (`tests/data-tables-mobile.test.tsx` checks the card against the table cell by cell, including links, buttons and switches). Each column may carry a `mobile` role: `media` (thumbnail), `title` (headline, the main link) or `actions` (button row at the bottom of the card); every other column becomes a labelled field. The layout switch is `useIsMobile()` (`hooks/use-media-query.ts`, `matchMedia`), which is `false` where `matchMedia` does not exist (jsdom), so existing tests keep rendering tables.
+
+From `md` up they stay tables. The wrapper scrolls horizontally inside the page (never the page itself), the actions column is pinned with `sticky end-0`, and name/message cells wrap instead of forcing a wide row. Why cards for all seven: each has few enough fields to scan as a card, and a scrolling table starts at the right edge in RTL, which hid the actions at the far left.
+
+The order lists inside a customer's page use the same component, so they switch too. The dashboard widgets were already lists and only needed touch-sized links.
+
+### Forms and dialogs
+
+- Grids declare `grid-cols-1` on mobile. Without it a CSS grid's single implicit column is as wide as its widest content, which stretched the layout viewport (the order page was 401px wide at 375px, which also pushed the cancel and status dialogs off the screen).
+- Selects truncate long labels (`min-w-0`, `max-w-full`), so a long category name cannot widen a form.
+- Form dialogs already cap at `90svh` and scroll; they stay centered dialogs on phones rather than becoming full-screen sheets, because none was cramped once the fields stacked.
+- Variant editor: each variant is a bordered card; options, size and colour stack, price and sale price sit side by side, and stock (with its adjust button) and SKU take a full row for an existing variant.
+- Category attributes and variant options keep their list rows (name, key and badges wrap; edit/delete stay as 44px icon buttons).
+
+### Typed-confirmation flows
+
+Customer reset-password and the notification broadcast dialog got only the generic touch sizing (44px inputs and buttons) and the width fix above. Their logic and wording are untouched. The phone e2e checks that each dialog sits fully inside the viewport and that the confirm button stays disabled until the exact phrase is typed (it never clicks it).
+
+### Where this is "usable, not ideal" (honest limits)
+
+- **Portrait tablets (768px+) keep desktop sizing**: 28-32px controls and a scrolling table. The 44px rule applies below `md` only, by decision. If touch tablets matter, switch the `max-md:` size classes in `components/ui` to a custom variant that also matches `(pointer: coarse)`.
+- **Switches** stay 18px tall visually; their tap area is extended to about 46px with an invisible overlay (verified in the layout, not by a rendered 44px box).
+- **Form dialogs** scroll instead of pinning their footer, so on a short phone the Save button is reached by scrolling.
+- **Dev-only**: TanStack Query's devtools button floats at the bottom-left in development builds only.
+- The date pickers in the orders filter use the browser's native date control, so their appearance is the browser's.
+
+### Tests
+
+`tests/data-tables-mobile.test.tsx` (card/table parity), `tests/app-shell-mobile.test.tsx` (hamburger and sheet), and `e2e/mobile.spec.ts`, run by the `mobile` Playwright project (Chromium at 375x667 with touch; the iPhone SE profile would need WebKit): login, hamburger and navigation, products list, product edit and save, and the two typed-confirmation gates (the broadcast API mocked in the browser as in the notifications spec).
+
 ## End-to-end tests
 
 `npm run test:e2e` runs against the **real backend on a separate database**, never the dev one. Start a second backend instance on port 8001 on `lamsa_test` by overriding the environment (no `.env` change), from `../lamsa-backend`:
@@ -296,7 +346,7 @@ The dashboard spec (`e2e/dashboard.spec.ts`) reuses the same order fixture, drop
 
 The banners spec (`e2e/banners.spec.ts`) makes an active `e2e-` product with an image through the API, creates a banner linked to it through the UI (checking the readable "منتج: …" text and what the backend stored), edits its link, toggles it and deletes it; banners are swept by title prefix. The notifications spec never touches a real send (see Notifications above).
 
-Playwright starts its own admin dev server on :5174 pointed at it. As in lamsa-web, `e2e/global-setup.ts` registers an `e2e-admin-…` account through the API and promotes it with `scripts.make_admin` (on `lamsa_test`); `global-teardown.ts` deletes every `e2e-` product and that account. The suite refuses to run against port 8000 or a database not ending in `_test`. If the backend on :8001 is down, the product tests skip. Overrides: `E2E_API_BASE_URL`, `E2E_MEDIA_BASE_URL`, `E2E_ADMIN_PORT`, `E2E_DB_NAME`.
+Playwright starts its own admin dev server on :5174 pointed at it. As in lamsa-web, `e2e/global-setup.ts` registers an `e2e-admin-…` account through the API and promotes it with `scripts.make_admin` (on `lamsa_test`); `global-teardown.ts` deletes every `e2e-` product and that account. The `mobile` project runs `e2e/mobile.spec.ts` at phone width (see Responsive layout). The suite refuses to run against port 8000 or a database not ending in `_test`. If the backend on :8001 is down, the product tests skip. Overrides: `E2E_API_BASE_URL`, `E2E_MEDIA_BASE_URL`, `E2E_ADMIN_PORT`, `E2E_DB_NAME`.
 
 ## Authentication and token storage
 
