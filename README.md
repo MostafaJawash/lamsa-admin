@@ -100,6 +100,28 @@ Routes: `/products` (list), `/products/new` and `/products/:id/edit` (a full pag
 - The stock-adjust `reason` is not stored by the backend.
 - A page reload ends the admin session by design, so e2e tests navigate by clicking.
 
+## Dashboard (لوحة التحكم)
+
+Route: `/`, the **post-login landing page** (login navigates to `/`, `/login` redirects there while signed in, and the sidebar's first entry is it). Code: `src/features/dashboard/`, `src/pages/dashboard/`. **Read-only:** every call is a `GET`; the widgets only link to pages where an admin can act.
+
+### Which real data powers each widget
+
+| Widget                                                                                          | Endpoint                                    | Notes                                                                                                                                                                                                                                                                                                     |
+| ----------------------------------------------------------------------------------------------- | ------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Six stat cards: new, preparing, shipped, delivered revenue, average order value, cancelled rate | `GET /admin/orders/stats` (all time)        | `counts{status}`, `delivered_revenue[]`, `average_order_value[]` (one entry per currency, **never summed**), `cancelled_rate` (a 0–1 fraction shown as a percentage). Cards link to `/orders?status=…` in the Orders list's own URL format (revenue and average to `delivered`, the rate to `cancelled`). |
+| Top products (best sellers)                                                                     | the same `GET /admin/orders/stats` response | `top_products` (5 by quantity). **Delivered orders only**, so the title says so. A product that no longer exists has no link.                                                                                                                                                                             |
+| Low stock                                                                                       | `GET /admin/products/low-stock?page_size=5` | Active simple products and active variants at or below the store's `low_stock_threshold` (no `threshold` param is sent, so the backend's own setting applies), lowest first. "عرض الكل" appears only when `total > 5` and opens `/products?sort=stock_asc`. Rows link to the product's edit page.         |
+| Recent orders                                                                                   | `GET /admin/orders?sort=newest&page_size=5` | A simplified row (number, customer, date, status, per-currency totals) linking to the order detail.                                                                                                                                                                                                       |
+
+**Three requests on a fresh load** (stats, low stock, recent orders; the cards and top products share one query), all in parallel, no waterfall. The query keys sit under the existing `["orders", …]` and `["products", …]` prefixes, so changing an order or adjusting stock elsewhere refreshes the widgets, and the stats are the same cache entry the Orders page uses. Each widget has its own skeleton and error state with a retry button, so one failing call never blanks the page. (The stat cards and top products share one query, so they fail and retry together.)
+
+### Considered and deliberately left out
+
+- **No chart:** the backend has no time-series endpoint (no per-day or per-week figures). The only way would be one `/stats` call per day with `date_from`/`date_to`, which is N requests for a decoration, so the page stays with numbers and lists and **no chart library was added**.
+- **No date range on the cards:** the cards are all-time (the backend's default); the page says so under them.
+- **No customer-growth or notification-performance widget:** the customers list has a total but no date filter, and notification delivery counts exist only per campaign, with no aggregate endpoint.
+- `ready_for_pickup` (historical orders only), the total order count and the delivered count are not shown, to keep the row uncluttered.
+
 ## Orders (الطلبات)
 
 Routes: `/orders` (list) and `/orders/:id` (detail). Code: `src/features/orders/` (hooks, URL list state, status/address/totals helpers, components), `src/pages/orders/`. Read-and-act only: the backend lets an admin **view an order, move it one step forward, or cancel it**. Nothing else on an order is editable.
@@ -129,7 +151,7 @@ Items (image, name, variant, quantity, unit price and line total in the line's o
 - **No internal admin note, no address or item editing:** the backend has none. The only admin text is the optional note on a status change, kept in the history.
 - **Map link:** the backend's `map_url` (Google Maps), as its README specifies for the admin. lamsa-web uses OpenStreetMap on the customer's own pages.
 - **Date filters are UTC** (the backend's rule; `date_to` is inclusive), up to three hours off Damascus time; the page says so next to the dates.
-- The at-a-glance counters are all-time, not date-filtered, and there is no dashboard page yet. Low stock (`GET /admin/products/low-stock`) is an inventory concern and is left to the products page or the dashboard.
+- The at-a-glance counters are all-time, not date-filtered. Low stock and the other stats are on the Dashboard (above).
 - The customer's name links to their page (`/customers/:id`).
 
 ## Categories and brands (الأقسام والماركات)
@@ -270,6 +292,8 @@ $env:PUSH_BACKEND="log"; $env:CACHE_ENABLED="false"; $env:CORS_ORIGINS="http://1
 
 Orders are created through the real customer flow (an `e2e-ord-` category and product made with the admin API, an `e2e-` customer who adds it to the cart and checks out; `e2e/support/orders.ts`). The backend has no order deletion, a product in an order cannot be deleted, and an account with orders is only anonymised, so **order cleanup is SQL-assisted**: every order id the run creates is recorded in a temp file (`lamsa-admin-e2e-orders.jsonl`), and `global-teardown.ts` deletes exactly those rows (items, totals and history cascade) with a small script run in the backend's venv, which asserts the database name ends in `_test`. Customers, products and the category are then removed through the API. A crashed run's record file is swept by the next run's setup. The customers spec (`e2e/customers.spec.ts`) reuses the same real-customer fixture and the same cleanup; the teardown reactivates a customer a test left deactivated before deleting the account (an inactive customer cannot log in to delete themselves). The catalog spec (`e2e/catalog.spec.ts`) creates `e2e-` categories, attributes, variant options and brands through the UI and creates a product in the new category to check that its required attribute and color option appear; it needs no SQL (no orders), only the API sweep in `global-teardown.ts`.
 
+The dashboard spec (`e2e/dashboard.spec.ts`) reuses the same order fixture, drops that product's stock to 0 with the stock-adjust endpoint so it shows in the low-stock widget, and asserts the stat cards, the pre-filtered click-through, the product and order links, and that a fresh load fires exactly the three data requests.
+
 The banners spec (`e2e/banners.spec.ts`) makes an active `e2e-` product with an image through the API, creates a banner linked to it through the UI (checking the readable "منتج: …" text and what the backend stored), edits its link, toggles it and deletes it; banners are swept by title prefix. The notifications spec never touches a real send (see Notifications above).
 
 Playwright starts its own admin dev server on :5174 pointed at it. As in lamsa-web, `e2e/global-setup.ts` registers an `e2e-admin-…` account through the API and promotes it with `scripts.make_admin` (on `lamsa_test`); `global-teardown.ts` deletes every `e2e-` product and that account. The suite refuses to run against port 8000 or a database not ending in `_test`. If the backend on :8001 is down, the product tests skip. Overrides: `E2E_API_BASE_URL`, `E2E_MEDIA_BASE_URL`, `E2E_ADMIN_PORT`, `E2E_DB_NAME`.
@@ -307,7 +331,7 @@ src/
   messages/     ar.ts: every UI string, typed (Modern Standard Arabic)
   styles/       globals.css: brand tokens, fonts, shadcn mapping
 tests/          Vitest setup and unit tests
-e2e/            Playwright smoke, products, orders, catalog, customers, banners and notifications (mocked API) tests
+e2e/            Playwright smoke, dashboard, products, orders, catalog, customers, banners and notifications (mocked API) tests
 ```
 
 ## Conventions

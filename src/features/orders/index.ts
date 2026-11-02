@@ -4,7 +4,9 @@
  * the components used by src/pages/orders. The backend's workflow is documented in
  * `status.ts` and in the README.
  */
-export { useOrder, useOrders } from "./api";
+export { useOrder, useOrders, useOrderStats } from "./api";
+export { StatusBadge } from "./components/status-badge";
+export { totalLines } from "./totals";
 export { AddressCard } from "./components/address-card";
 export { OrderDetailView } from "./components/order-detail-view";
 export { OrderFilters } from "./components/order-filters";
@@ -18,4 +20,9 @@ export {
   toSearchParams,
   type ListParams,
 } from "./list-filters";
-export type { OrderDetail, OrderStatus, OrderSummary } from "./types";
+export type {
+  OrderDetail,
+  OrderStats,
+  OrderStatus,
+  OrderSummary,
+} from "./types";

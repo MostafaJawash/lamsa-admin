@@ -9,6 +9,35 @@ export const ar = {
     adminTitle: "لوحة الإدارة",
     loading: "جارٍ التحميل…",
   },
+  dashboard: {
+    title: "لوحة التحكم",
+    viewAll: "عرض الكل",
+    allTimeNote:
+      "الإيرادات ومتوسط الطلب ونسبة الإلغاء محسوبة على كل الطلبات حتى الآن.",
+    stats: {
+      pending: "طلبات جديدة",
+      preparing: "قيد التجهيز",
+      shipped: "تم الشحن",
+      revenue: "إيرادات الطلبات المُسلَّمة",
+      average: "متوسط قيمة الطلب",
+      cancelledRate: "نسبة الإلغاء",
+      noRevenue: "لا توجد طلبات مُسلَّمة بعد",
+    },
+    topProducts: {
+      title: "الأكثر مبيعًا (طلبات مُسلَّمة)",
+      empty: "لا توجد مبيعات مُسلَّمة بعد.",
+      quantity: "قطعة",
+    },
+    lowStock: {
+      title: "مخزون منخفض",
+      empty: "لا توجد منتجات منخفضة المخزون.",
+      left: "المتبقي",
+    },
+    recentOrders: {
+      title: "أحدث الطلبات",
+      empty: "لا توجد طلبات بعد.",
+    },
+  },
   nav: {
     dashboard: "لوحة التحكم",
     products: "المنتجات",
