@@ -2,7 +2,7 @@
 
 Admin dashboard for the Lamsa beauty store. A separate project from the customer website (`../lamsa-web`); both use the same backend (`../lamsa-backend`, FastAPI). Arabic only, right-to-left.
 
-> Status: login and the **Products** page are built (see below). The other pages still show their Arabic title and a placeholder.
+> Status: login, **Products** and **Orders** are built (see below). The other pages still show their Arabic title and a placeholder.
 
 ## Stack
 
@@ -100,6 +100,38 @@ Routes: `/products` (list), `/products/new` and `/products/:id/edit` (a full pag
 - The stock-adjust `reason` is not stored by the backend.
 - A page reload ends the admin session by design, so e2e tests navigate by clicking.
 
+## Orders (الطلبات)
+
+Routes: `/orders` (list) and `/orders/:id` (detail). Code: `src/features/orders/` (hooks, URL list state, status/address/totals helpers, components), `src/pages/orders/`. Read-and-act only: the backend lets an admin **view an order, move it one step forward, or cancel it**. Nothing else on an order is editable.
+
+### The real status workflow (lamsa-backend `app/modules/orders/workflow.py`)
+
+| Order kind                                              | Forward path (one step at a time)                    |
+| ------------------------------------------------------- | ---------------------------------------------------- |
+| Delivery (every order today; it has a shipping address) | `pending → preparing → shipped → delivered`          |
+| Pickup (historical orders only; the address is `null`)  | `pending → preparing → ready_for_pickup → delivered` |
+
+- An admin moves **exactly one step forward** (`POST /admin/orders/{id}/status {to_status, note?}`). Any other move is `422 INVALID_STATUS_TRANSITION`. The dashboard never decides this itself: it shows one button per entry of the order's `allowed_next_statuses`.
+- **Cancelling** is a separate action (`POST /admin/orders/{id}/cancel {reason, restore_stock}`), allowed from `pending`, `preparing`, `shipped` and `ready_for_pickup` (the order's `can_cancel`). `delivered` and `cancelled` are final. The reason is required (3–255 characters). **Stock is restored by default**; `restore_stock=false` ("don't restore", for lost or unreturned goods) is accepted **only for `shipped` orders**, so the checkbox appears only there. A customer can cancel only while `pending`; that is the website's business.
+- `delivered` also sets `payment_status` to `paid` (cash on delivery is the only payment method). Each step is recorded in `history` with who made it and the optional note (≤255 characters), and the customer is notified by the backend.
+- Labels come from the backend's `status_label` (`delivered` reads "تم التوصيل", or "تم الاستلام" for a pickup order); `ar.ts` mirrors them for the filter and for orders not at hand. The backend README's table says "وصل"; the code says "تم التوصيل", and the code is what is shown.
+
+### List
+
+Server-side pagination (20 per page) and every filter in the URL (`?page=2&q=0933&status=shipped&delivery=damascus_courier&from=2026-10-01&to=2026-10-31&sort=total_desc`). Filters are exactly what `GET /admin/orders` supports: status, delivery method (from `GET /admin/delivery-methods`), UTC date range, search, sort (`newest`, `oldest`, `total_desc`). Search: digits match the order number exactly or part of a phone; other text matches part of the name or phone. Columns: order number, customer name and phone, date (shown in Asia/Damascus), item count, totals, delivery method, status badge, details link. **Totals are one amount per currency, SYP then USD (legacy EUR last), never added together.** A small strip above the list shows the counts of new / preparing / shipped orders from the existing `GET /admin/orders/stats` (all time); clicking a tile filters the list. Badge colors come from the design tokens: neutral = received, amber = preparing, brand = shipped, gold = ready for pickup, green = delivered, red = cancelled.
+
+### Detail
+
+Items (image, name, variant, quantity, unit price and line total in the line's own currency, a link to the product's edit page while the product exists), per-currency subtotal / discount (only if non-zero) / delivery fee / total exactly as the backend stored them, the customer (name, phone, order count; the name becomes a link once a customer page exists: `customerHref()` in `features/orders/address.ts`), the address snapshot as stored (governorate code mapped to its Arabic name through `GET /governorates`, with the code as fallback; old `{city, street, building}` snapshots and pickup orders are handled), a map link, the delivery method with its "fee is paid directly to the carrier" note, payment, customer notes and gift message, a vertical timeline of every workflow step (with the cancel reason), and the history (who, when, note). The status action and the cancel action each open a confirmation dialog, show the backend's own error message, and replace the page with the server's updated order.
+
+### Known gaps and limits
+
+- **No internal admin note, no address or item editing:** the backend has none. The only admin text is the optional note on a status change, kept in the history.
+- **Map link:** the backend's `map_url` (Google Maps), as its README specifies for the admin. lamsa-web uses OpenStreetMap on the customer's own pages.
+- **Date filters are UTC** (the backend's rule; `date_to` is inclusive), up to three hours off Damascus time; the page says so next to the dates.
+- The at-a-glance counters are all-time, not date-filtered, and there is no dashboard page yet. Low stock (`GET /admin/products/low-stock`) is an inventory concern and is left to the products page or the dashboard.
+- Customer detail pages do not exist yet, so the customer is not linked.
+
 ## End-to-end tests
 
 `npm run test:e2e` runs against the **real backend on a separate database**, never the dev one. Start a second backend instance on port 8001 on `lamsa_test` by overriding the environment (no `.env` change), from `../lamsa-backend`:
@@ -112,6 +144,8 @@ $env:PUSH_BACKEND="log"; $env:CACHE_ENABLED="false"; $env:CORS_ORIGINS="http://1
 .\venv\Scripts\python.exe -m scripts.seed_base
 .\venv\Scripts\uvicorn.exe app.main:app --port 8001 --no-proxy-headers
 ```
+
+Orders are created through the real customer flow (an `e2e-ord-` category and product made with the admin API, an `e2e-` customer who adds it to the cart and checks out; `e2e/support/orders.ts`). The backend has no order deletion, a product in an order cannot be deleted, and an account with orders is only anonymised, so **order cleanup is SQL-assisted**: every order id the run creates is recorded in a temp file (`lamsa-admin-e2e-orders.jsonl`), and `global-teardown.ts` deletes exactly those rows (items, totals and history cascade) with a small script run in the backend's venv, which asserts the database name ends in `_test`. Customers, products and the category are then removed through the API. A crashed run's record file is swept by the next run's setup.
 
 Playwright starts its own admin dev server on :5174 pointed at it. As in lamsa-web, `e2e/global-setup.ts` registers an `e2e-admin-…` account through the API and promotes it with `scripts.make_admin` (on `lamsa_test`); `global-teardown.ts` deletes every `e2e-` product and that account. The suite refuses to run against port 8000 or a database not ending in `_test`. If the backend on :8001 is down, the product tests skip. Overrides: `E2E_API_BASE_URL`, `E2E_MEDIA_BASE_URL`, `E2E_ADMIN_PORT`, `E2E_DB_NAME`.
 
@@ -148,7 +182,7 @@ src/
   messages/     ar.ts: every UI string, typed (Modern Standard Arabic)
   styles/       globals.css: brand tokens, fonts, shadcn mapping
 tests/          Vitest setup and unit tests
-e2e/            Playwright smoke + products tests
+e2e/            Playwright smoke, products and orders tests
 ```
 
 ## Conventions

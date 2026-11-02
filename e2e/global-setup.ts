@@ -1,11 +1,13 @@
 import {
   assertTestTarget,
   backendUp,
+  loginViaApi,
   makeAdmin,
   PASSWORD,
   registerViaApi,
   uniquePhone,
 } from "./support/backend.ts";
+import { cleanupRecorded } from "./support/orders.ts";
 
 /**
  * A test admin, as in lamsa-web: registered through the API, promoted with the backend's
@@ -20,4 +22,6 @@ export default async function globalSetup() {
   makeAdmin(phone);
   process.env.E2E_ADMIN_PHONE = phone;
   process.env.E2E_ADMIN_PASSWORD = PASSWORD;
+  // Sweep what a crashed earlier run left behind (its record file is still there).
+  await cleanupRecorded((await loginViaApi(phone)).access_token);
 }

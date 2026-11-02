@@ -12,6 +12,7 @@ import { LoginPage } from "@/pages/login";
 import { NotFoundPage } from "@/pages/not-found";
 import { NotificationsPage } from "@/pages/notifications";
 import { OrdersPage } from "@/pages/orders";
+import { OrderDetailPage } from "@/pages/orders/order-detail-page";
 import { ProductsPage } from "@/pages/products";
 import {
   ProductCreatePage,
@@ -51,6 +52,7 @@ export const router = createBrowserRouter([
           { path: "categories", element: <CategoriesPage /> },
           { path: "brands", element: <BrandsPage /> },
           { path: "orders", element: <OrdersPage /> },
+          { path: "orders/:id", element: <OrderDetailPage /> },
           { path: "customers", element: <CustomersPage /> },
           { path: "banners", element: <BannersPage /> },
           { path: "notifications", element: <NotificationsPage /> },

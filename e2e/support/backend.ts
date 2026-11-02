@@ -39,7 +39,11 @@ export function assertTestTarget(): void {
 export async function call<T>(
   method: string,
   path: string,
-  { token, body }: { token?: string; body?: unknown } = {},
+  {
+    token,
+    body,
+    headers,
+  }: { token?: string; body?: unknown; headers?: Record<string, string> } = {},
 ): Promise<T> {
   const response = await fetch(`${API}${path}`, {
     method,
@@ -47,6 +51,7 @@ export async function call<T>(
       Accept: "application/json",
       ...(body === undefined ? {} : { "Content-Type": "application/json" }),
       ...(token ? { Authorization: `Bearer ${token}` } : {}),
+      ...headers,
     },
     body: body === undefined ? undefined : JSON.stringify(body),
   });
@@ -175,4 +180,23 @@ export function makePng(size = 16): Buffer {
     chunk("IDAT", deflateSync(raw)),
     chunk("IEND", Buffer.alloc(0)),
   ]);
+}
+
+/** Uploads one PNG to a product through the admin API (multipart). */
+export async function uploadProductImage(
+  token: string,
+  productId: number,
+): Promise<void> {
+  const form = new FormData();
+  form.append(
+    "files",
+    new Blob([new Uint8Array(makePng())], { type: "image/png" }),
+    "e2e.png",
+  );
+  const response = await fetch(`${API}/admin/products/${productId}/images`, {
+    method: "POST",
+    headers: { Authorization: `Bearer ${token}` },
+    body: form,
+  });
+  if (!response.ok) throw new BackendError(response.status, "UPLOAD");
 }
