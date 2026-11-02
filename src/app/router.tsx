@@ -16,6 +16,8 @@ import { DashboardPage } from "@/pages/dashboard";
 import { LoginPage } from "@/pages/login";
 import { NotFoundPage } from "@/pages/not-found";
 import { NotificationsPage } from "@/pages/notifications";
+import { NotificationComposePage } from "@/pages/notifications/compose-page";
+import { NotificationDetailPage } from "@/pages/notifications/notification-detail-page";
 import { OrdersPage } from "@/pages/orders";
 import { OrderDetailPage } from "@/pages/orders/order-detail-page";
 import { ProductsPage } from "@/pages/products";
@@ -64,6 +66,8 @@ export const router = createBrowserRouter([
           { path: "customers/:id", element: <CustomerDetailPage /> },
           { path: "banners", element: <BannersPage /> },
           { path: "notifications", element: <NotificationsPage /> },
+          { path: "notifications/new", element: <NotificationComposePage /> },
+          { path: "notifications/:id", element: <NotificationDetailPage /> },
           { path: "settings", element: <SettingsPage /> },
           { path: "*", element: <NotFoundPage /> },
         ],

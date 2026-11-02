@@ -1,5 +1,6 @@
 import {
   deleteAccount,
+  deleteBannersByPrefix,
   deleteCatalogByPrefix,
   deleteProductsByPrefix,
   loginViaApi,
@@ -13,6 +14,7 @@ export default async function globalTeardown() {
     const admin = await loginViaApi(phone);
     // Orders first (SQL on lamsa_test), then customers/products/categories through the API.
     await cleanupRecorded(admin.access_token);
+    await deleteBannersByPrefix(admin.access_token, "e2e-");
     await deleteProductsByPrefix(admin.access_token, "e2e-");
     await deleteCatalogByPrefix(admin.access_token, "e2e-");
   } catch {

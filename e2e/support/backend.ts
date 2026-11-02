@@ -242,3 +242,22 @@ export async function deleteCatalogByPrefix(
     }
   }
 }
+
+/** Deletes every banner whose title starts with `prefix` (leftovers of a crashed run). */
+export async function deleteBannersByPrefix(
+  token: string,
+  prefix: string,
+): Promise<void> {
+  const banners = await call<{ id: number; title: string }[]>(
+    "GET",
+    "/admin/banners",
+    { token },
+  );
+  for (const banner of banners.filter((b) => b.title.startsWith(prefix))) {
+    try {
+      await call("DELETE", `/admin/banners/${banner.id}`, { token });
+    } catch {
+      // already gone
+    }
+  }
+}

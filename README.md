@@ -211,6 +211,50 @@ Server-side pagination (20 per page); page, search and status are in the URL. Co
 - **Actions:** as above, in a separate card.
 - A bad or unknown id shows a not-found state.
 
+## Banners (البانرات)
+
+### The real model (lamsa-backend `app/modules/banners`, `notifications/links.py`)
+
+- **Fields:** a mandatory **image** (JPEG, PNG or WEBP, up to 5 MB), **title** (1-150), optional **subtitle** (≤255), a **link** `{type, value}`, an **active** switch, an optional **window** (`starts_at` / `ends_at`, UTC; the end must be after the start) and a computed **state**: `inactive`, `scheduled`, `active` or `expired`. There is no "publishable" rule like products have: the image is required at creation, so there is nothing to block on.
+- **Flat list, no paging.** `GET /admin/banners` returns every banner in display order. The storefront shows at most **10**: active ones inside their window, in that order, skipping a banner whose link target is hidden (the page says so).
+- **Order is one call, not a number.** `PUT /admin/banners/order` takes **every** id exactly once (`BANNER_ORDER_MISMATCH` otherwise). The page therefore has up/down buttons that send the full new order, and no numeric sort field (unlike categories and brands). A new banner goes last.
+- **Link types an admin can save** (the "catalog" types, shared with notification campaigns): `none`, `product`, `category`, `brand`, `new`, `sale`, `url`. `product` / `category` / `brand` carry a **slug** (not an id) that must exist; `url` must be **https** and ≤255 characters; `none`, `new` and `sale` take no value. Anything else is `INVALID_LINK` (422). `order`, `admin_order` and `admin_product` exist in the enum but are rejected here.
+
+### The page (`/banners`)
+
+- **List:** thumbnail, title (+ subtitle), the link as readable text (**"منتج: اسم المنتج"**, "قسم: …", "ماركة: …", "رابط خارجي: https://…", "قسم الجديد", "قسم التخفيضات", "بدون رابط"), state badge, date range (store time, Damascus), an active switch, up/down, edit, delete.
+- **Names from slugs:** categories and brands come from the admin lists already cached for Products (inactive ones included). A product has no lookup by slug in the admin API, so the **public** `GET /products/{slug}` is used. It only answers for products the store shows, so a 404 there also drives a note, "وجهة الرابط غير ظاهرة في المتجر", on banners whose product, category or brand is hidden or gone. The backend still lets an admin save such a link, so this is a warning, never a block.
+- **Create/edit is a dialog** (a small field set; the link picker is the only complex part). The **link-target picker** is a type select plus, per type: a debounced server search over `GET /admin/products` for products, an in-memory searchable list of the cached categories or brands, a plain https input for external links, and nothing for new / sale / none. Changing the type clears the value. The picker returns the slug; editing shows the target's name again.
+- **Image:** same conventions as category and brand images (`ImageField`: type and 5 MB checked in the browser, the server stays the authority). A new banner needs one (sent in the multipart create); on an existing banner a replacement uploads immediately (`PUT /{id}/image`). There is no "remove": a banner always has an image.
+- **Validation and errors:** title/subtitle limits, https URL, a chosen target and end-after-start are checked client-side; `INVALID_LINK` and field errors from the backend land on the field.
+- **Delete** asks first. Activating/deactivating is one switch (a `PATCH` of `is_active` only).
+
+## Notifications (الإشعارات)
+
+### What the backend really offers (lamsa-backend `app/modules/notifications`, `integrations/firebase/push.py`)
+
+This is **both** a compose-and-send feature **and** a history, and the send is **real**:
+
+- `POST /admin/notifications {audience, user_id?, title (≤150), body (≤500), link?, scheduled_at?}` creates a campaign. **The audience is only `all` (marketing, to every customer) or `user` (a message to one customer).** There are **no segments** (no abandoned-cart, no lists of ids), and the UI does not pretend otherwise. The link takes the same catalog types as banners. No `scheduled_at` means **immediate** (queued, then pushed in the background right after the request commits); otherwise 1 minute to 90 days ahead. Marketing respects quiet hours (it is deferred to the end of the window and flagged `deferred_by_quiet_hours`) and users' marketing preferences.
+- `GET /admin/notifications` is the **history**: paginated, newest first, filterable by `status` (queued, scheduled, sending, sent, cancelled) and `audience`; each row has `recipients_count`, `success_count`, `failure_count`. `GET /admin/notifications/{id}` is one campaign. While a campaign is still `scheduled`: `PATCH` (title, body, link, time), `POST /{id}/cancel` and `POST /{id}/send-now` (ignores quiet hours); anything else is 409.
+- `POST /admin/notifications/test {title?, body?}` pushes to **the calling admin's own devices only** (no inbox row, no history) and returns a result per device.
+- Real pushes: `PUSH_BACKEND=firebase` (as in `lamsa-backend/.env`, i.e. the **dev backend on :8000**) sends through FCM to real devices; `PUSH_BACKEND=log` only logs. **The backend has no safeguards of its own for a broadcast**: no recipient count, no confirmation, no rate limit, no idempotency key, and a sent push cannot be recalled. The only brake is quiet hours.
+
+### Pages and the safeguards built around sending
+
+- `/notifications`: the history table (date, title and body preview, audience, status with a "deferred" note, delivery numbers once sent), filters and paging in the URL. Rows open `/notifications/:id`: the preview, link, who created it, the delivery numbers (refreshed every 3 s while queued or sending) and, for a scheduled campaign, edit, cancel and send now.
+- `/notifications/new` (compose): the **static warning "هذا الإجراء يرسل إشعارات حقيقية"** at the top (always, whatever the environment: the admin UI cannot tell whether the backend it talks to pushes for real), then:
+  1. **"Try it on your own device first":** the test push, with copy saying it never reaches a customer.
+  2. The audience (**all** or **one customer**, picked from the active customers by name or phone), title and body (with counters), a link (the same picker as banners), send now or schedule (store time, checked against the 1 minute to 90 days window).
+  3. **"مراجعة وإرسال" never sends.** It opens the **send dialog**, which shows the push exactly as it will arrive, who gets it ("جميع العملاء": there is no count endpoint, so it is described, not counted) and when. A message to **one customer** needs a plain confirmation (its blast radius is one person). A **broadcast** additionally needs the admin to **type the phrase "إرسال للجميع"** before the button enables (same pattern as the customers' password reset; Enter in the box cannot bypass it), next to a red warning that it cannot be recalled.
+  4. **30-second broadcast lock** (client-side only, because the backend has no idempotency key): once the backend accepts a broadcast (create, scheduled, or "send now" of a scheduled broadcast), the review/send controls stay disabled for 30 s with a countdown. It is also enforced in the mutation, synchronously: only one broadcast request can be in flight and a second is refused before it reaches the network, so a double click cannot double-send (a test caught that React's `isPending` lags behind a very fast second click). The lock lives in memory at module level, so leaving and re-opening the page does not reset it; a full reload does. Messages to one customer are not locked.
+- **Not built, because the backend has no such thing:** segments, an audience size, drafts, deleting a campaign, resending.
+
+### Testing, and why e2e never does a real send
+
+- Unit and component tests use a **mocked `fetch`** only: nothing in them can reach a backend, so nothing can reach a device. They cover the phrase gate (disabled until it matches, exact payload, one request on a double click), the single-customer path, scheduling, the cooldown (including the unlock after 30 s) and the mutation-level guard.
+- **E2E (`e2e/notifications.spec.ts`) mocks the notifications API in the browser** (`page.route` fulfills every `/admin/notifications…` request itself and never calls `route.continue()`), so **no request to those endpoints reaches any backend, not even lamsa_test**. It proves the button stays disabled until the phrase is typed, the exact payload that would be sent, the preview and the 30 s lock. **It deliberately does not cover a real send:** `PUSH_BACKEND` of the running :8001 instance was not verified (the README's start command sets `log`, but the machine's `lamsa-backend/.env` says `firebase`), and being wrong would push to real phones. The banners e2e is real (banners cannot push).
+
 ## End-to-end tests
 
 `npm run test:e2e` runs against the **real backend on a separate database**, never the dev one. Start a second backend instance on port 8001 on `lamsa_test` by overriding the environment (no `.env` change), from `../lamsa-backend`:
@@ -225,6 +269,8 @@ $env:PUSH_BACKEND="log"; $env:CACHE_ENABLED="false"; $env:CORS_ORIGINS="http://1
 ```
 
 Orders are created through the real customer flow (an `e2e-ord-` category and product made with the admin API, an `e2e-` customer who adds it to the cart and checks out; `e2e/support/orders.ts`). The backend has no order deletion, a product in an order cannot be deleted, and an account with orders is only anonymised, so **order cleanup is SQL-assisted**: every order id the run creates is recorded in a temp file (`lamsa-admin-e2e-orders.jsonl`), and `global-teardown.ts` deletes exactly those rows (items, totals and history cascade) with a small script run in the backend's venv, which asserts the database name ends in `_test`. Customers, products and the category are then removed through the API. A crashed run's record file is swept by the next run's setup. The customers spec (`e2e/customers.spec.ts`) reuses the same real-customer fixture and the same cleanup; the teardown reactivates a customer a test left deactivated before deleting the account (an inactive customer cannot log in to delete themselves). The catalog spec (`e2e/catalog.spec.ts`) creates `e2e-` categories, attributes, variant options and brands through the UI and creates a product in the new category to check that its required attribute and color option appear; it needs no SQL (no orders), only the API sweep in `global-teardown.ts`.
+
+The banners spec (`e2e/banners.spec.ts`) makes an active `e2e-` product with an image through the API, creates a banner linked to it through the UI (checking the readable "منتج: …" text and what the backend stored), edits its link, toggles it and deletes it; banners are swept by title prefix. The notifications spec never touches a real send (see Notifications above).
 
 Playwright starts its own admin dev server on :5174 pointed at it. As in lamsa-web, `e2e/global-setup.ts` registers an `e2e-admin-…` account through the API and promotes it with `scripts.make_admin` (on `lamsa_test`); `global-teardown.ts` deletes every `e2e-` product and that account. The suite refuses to run against port 8000 or a database not ending in `_test`. If the backend on :8001 is down, the product tests skip. Overrides: `E2E_API_BASE_URL`, `E2E_MEDIA_BASE_URL`, `E2E_ADMIN_PORT`, `E2E_DB_NAME`.
 
@@ -261,7 +307,7 @@ src/
   messages/     ar.ts: every UI string, typed (Modern Standard Arabic)
   styles/       globals.css: brand tokens, fonts, shadcn mapping
 tests/          Vitest setup and unit tests
-e2e/            Playwright smoke, products, orders, catalog and customers tests
+e2e/            Playwright smoke, products, orders, catalog, customers, banners and notifications (mocked API) tests
 ```
 
 ## Conventions

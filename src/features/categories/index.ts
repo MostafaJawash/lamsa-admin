@@ -19,6 +19,7 @@ export {
   type CategoryOption,
   type CategoryVariantOption,
 } from "./api";
+export { flattenTree } from "./tree";
 export { CategoriesTable } from "./components/categories-table";
 export { CategoryForm } from "./components/category-form";
 export { CategoryImage } from "./components/category-image";
