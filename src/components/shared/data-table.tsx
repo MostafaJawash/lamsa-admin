@@ -1,6 +1,7 @@
 import type { ReactNode } from "react";
 
 import { EmptyState } from "@/components/shared/empty-state";
+import { Skeleton } from "@/components/ui/skeleton";
 import {
   Table,
   TableBody,
@@ -21,20 +22,28 @@ type DataTableProps<T> = {
   columns: readonly Column<T>[];
   rows: readonly T[];
   rowKey: (row: T) => string | number;
+  emptyTitle?: string;
   emptyMessage?: string;
+  /** Shows skeleton rows instead of data (first load). */
+  loading?: boolean;
+  skeletonRows?: number;
 };
 
 /**
- * Placeholder wrapper over the shadcn table: columns are described by data, rows render
- * through `cell`. Sorting, selection and loading skeletons come with the first real list.
+ * Wrapper over the shadcn table: columns are described by data, rows render through `cell`.
+ * Sorting and paging belong to the server, so they live in the page, not here.
  */
 export function DataTable<T>({
   columns,
   rows,
   rowKey,
+  emptyTitle,
   emptyMessage,
+  loading = false,
+  skeletonRows = 8,
 }: DataTableProps<T>) {
-  if (rows.length === 0) return <EmptyState message={emptyMessage} />;
+  if (!loading && rows.length === 0)
+    return <EmptyState title={emptyTitle} message={emptyMessage} />;
   return (
     <Table>
       <TableHeader>
@@ -47,15 +56,25 @@ export function DataTable<T>({
         </TableRow>
       </TableHeader>
       <TableBody>
-        {rows.map((row) => (
-          <TableRow key={rowKey(row)}>
-            {columns.map((column) => (
-              <TableCell key={column.key} className={column.className}>
-                {column.cell(row)}
-              </TableCell>
+        {loading
+          ? Array.from({ length: skeletonRows }, (_, index) => (
+              <TableRow key={index} data-testid="skeleton-row">
+                {columns.map((column) => (
+                  <TableCell key={column.key} className={column.className}>
+                    <Skeleton className="h-5 w-full" />
+                  </TableCell>
+                ))}
+              </TableRow>
+            ))
+          : rows.map((row) => (
+              <TableRow key={rowKey(row)}>
+                {columns.map((column) => (
+                  <TableCell key={column.key} className={column.className}>
+                    {column.cell(row)}
+                  </TableCell>
+                ))}
+              </TableRow>
             ))}
-          </TableRow>
-        ))}
       </TableBody>
     </Table>
   );

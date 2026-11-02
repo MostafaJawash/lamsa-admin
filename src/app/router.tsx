@@ -13,6 +13,10 @@ import { NotFoundPage } from "@/pages/not-found";
 import { NotificationsPage } from "@/pages/notifications";
 import { OrdersPage } from "@/pages/orders";
 import { ProductsPage } from "@/pages/products";
+import {
+  ProductCreatePage,
+  ProductEditPage,
+} from "@/pages/products/product-form-page";
 import { SettingsPage } from "@/pages/settings";
 
 /** Loader of the protected tree: no admin session means /login before anything renders. */
@@ -42,6 +46,8 @@ export const router = createBrowserRouter([
         children: [
           { index: true, element: <DashboardPage /> },
           { path: "products", element: <ProductsPage /> },
+          { path: "products/new", element: <ProductCreatePage /> },
+          { path: "products/:id/edit", element: <ProductEditPage /> },
           { path: "categories", element: <CategoriesPage /> },
           { path: "brands", element: <BrandsPage /> },
           { path: "orders", element: <OrdersPage /> },

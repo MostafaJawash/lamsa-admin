@@ -79,3 +79,33 @@ export function sumByCurrency(values: readonly MoneyValue[]): MoneyValue[] {
     .sort(([a], [b]) => rank(a) - rank(b) || a.localeCompare(b))
     .map(([currency, minor]) => ({ currency, amount: fromMinor(minor) }));
 }
+
+/** Smallest and largest of amounts that share one currency, as amount strings; null when none parse. */
+export function amountRange(
+  amounts: readonly string[],
+): { min: string; max: string } | null {
+  let min: bigint | null = null;
+  let max: bigint | null = null;
+  for (const amount of amounts) {
+    const minor = toMinor(amount);
+    if (minor === null) continue;
+    if (min === null || minor < min) min = minor;
+    if (max === null || minor > max) max = minor;
+  }
+  return min === null || max === null
+    ? null
+    : { min: fromMinor(min), max: fromMinor(max) };
+}
+
+/** True when `a` is strictly lower than `b` (both unparseable or equal give false). */
+export function isLowerAmount(a: string, b: string): boolean {
+  const x = toMinor(a);
+  const y = toMinor(b);
+  return x !== null && y !== null && x < y;
+}
+
+/** "150000" -> "150000.00", "8.5" -> "8.50"; null when it is not an amount. */
+export function normalizeAmount(amount: string): string | null {
+  const minor = toMinor(amount);
+  return minor === null ? null : fromMinor(minor);
+}

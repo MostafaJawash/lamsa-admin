@@ -2,7 +2,7 @@
 
 Admin dashboard for the Lamsa beauty store. A separate project from the customer website (`../lamsa-web`); both use the same backend (`../lamsa-backend`, FastAPI). Arabic only, right-to-left.
 
-> Status: project structure and tooling only. Every page shows its Arabic title and a placeholder; features come next.
+> Status: login and the **Products** page are built (see below). The other pages still show their Arabic title and a placeholder.
 
 ## Stack
 
@@ -53,16 +53,16 @@ Validated at startup with zod (`src/lib/env.ts`); a missing or malformed value s
 
 ### Scripts
 
-| Script                              | What it does                                                                                                 |
-| ----------------------------------- | ------------------------------------------------------------------------------------------------------------ |
-| `npm run dev` / `build` / `preview` | Vite dev server / `tsc -b` then production build / serve the build                                           |
-| `npm run lint`                      | oxlint (`no-explicit-any` is an error)                                                                       |
-| `npm run typecheck`                 | `tsc -b` (strict, `noUncheckedIndexedAccess`)                                                                |
-| `npm run format` / `format:check`   | Prettier write / check                                                                                       |
-| `npm test`                          | Vitest (`tests/`)                                                                                            |
-| `npm run test:e2e`                  | Playwright smoke tests (`e2e/`); starts the dev server itself. First time: `npx playwright install chromium` |
-| `npm run gen:api`                   | Regenerate `src/lib/api/schema.d.ts` from the running backend                                                |
-| `npm run audit`                     | `npm audit --omit=dev --audit-level=high`                                                                    |
+| Script                              | What it does                                                                                                                                                                |
+| ----------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `npm run dev` / `build` / `preview` | Vite dev server / `tsc -b` then production build / serve the build                                                                                                          |
+| `npm run lint`                      | oxlint (`no-explicit-any` is an error)                                                                                                                                      |
+| `npm run typecheck`                 | `tsc -b` (strict, `noUncheckedIndexedAccess`)                                                                                                                               |
+| `npm run format` / `format:check`   | Prettier write / check                                                                                                                                                      |
+| `npm test`                          | Vitest (`tests/`)                                                                                                                                                           |
+| `npm run test:e2e`                  | Playwright (`e2e/`) against the **lamsa_test backend on :8001**; starts its own dev server on :5174 (see _End-to-end tests_). First time: `npx playwright install chromium` |
+| `npm run gen:api`                   | Regenerate `src/lib/api/schema.d.ts` from the running backend                                                                                                               |
+| `npm run audit`                     | `npm audit --omit=dev --audit-level=high`                                                                                                                                   |
 
 ### Regenerating the API types
 
@@ -73,6 +73,47 @@ npm run gen:api
 ```
 
 This rewrites `src/lib/api/schema.d.ts` (committed). Run it whenever the backend's API changes, then `npm run typecheck` to find what broke. The client (`src/lib/api/`) strips the `/api/v1` prefix from the generated paths, so you write `api.GET("/admin/orders")`.
+
+## Products (المنتجات)
+
+Routes: `/products` (list), `/products/new` and `/products/:id/edit` (a full page, not a modal). Code: `src/features/products/` (hooks, zod schema, payload mapping, components), `src/pages/products/` (route components). Categories and brands are only _consumed_ here (`features/categories`, `features/brands`; cached 5 minutes); their management pages are a later phase.
+
+**List.** Server-side pagination (`page`/`page_size`=20), and every filter lives in the URL query string (`?page=2&q=…&category=3&brand=2&status=active&type=variable&sort=name`), so back/forward and shared links work. Filters: name/SKU search (debounced), category (includes child categories), brand, status, type. Sort: newest, name, price, lowest stock (all done by the backend). Rows show thumbnail, name/type/SKU, category, brand, price, stock, status and actions (edit, adjust stock for simple products, delete). Delete asks for confirmation and shows the backend's own message when it refuses (`PRODUCT_HAS_ORDERS`, `PRODUCT_IN_BUNDLE`: deactivate instead).
+
+**Product types** (the backend has three): `simple` (price + stock), `variable` (variants only, no top-level price or stock) and `bundle`. The type is chosen on creation and cannot change.
+
+**Form.** react-hook-form + zod; the schema mirrors the backend's Pydantic limits (name 1–200, description ≤20,000, SKU ≤64, slug ≤120, stock 0–1,000,000, price ≤13 digits, sale price lower than price). The product's currency is SYP or USD and is editable (variants inherit it; there is no conversion, so re-enter the prices when changing it). SYP prices are whole pounds in the UI (a convention: the backend accepts 2 decimals for both); USD allows cents. The category decides which **attributes** (text, number, select, multiselect, boolean, date; some required) and **variant options** (color with hex, or select) exist, so those fields are rebuilt from `GET /admin/categories/{id}` when the category changes.
+
+**Save flow.** The backend always creates a product _inactive_. Create therefore does: `POST /admin/products` → upload the chosen images → `PATCH is_active:true` if "نشط" was on. If a later step fails, the product already exists, so the page opens its edit page with the reason (for publishing, the Arabic list from `PRODUCT_NOT_PUBLISHABLE`). Edit does `PATCH` for the product fields and, for variable products, only the _changed_ variants through their own endpoints (delete, patch, add). After a successful save the page returns to the list with a toast. Backend validation errors go onto the field they name (dotted paths such as `variants.0.price`, `INVALID_ATTRIBUTE_VALUE {key}`, `MISSING_REQUIRED_ATTRIBUTE {keys}`, `SKU_TAKEN`, `SLUG_TAKEN`); anything else is a toast. Leaving with unsaved changes asks first (`useBlocker`).
+
+**Stock.** On an existing product, stock is not a form field: "تعديل المخزون" (list and edit page, and per variant) calls the dedicated atomic `stock-adjust` endpoints with a signed delta and optional reason (the backend rejects going below zero). The reason is accepted by the API but no audit trail is stored for it today.
+
+**Images.** Separate endpoints, not part of the product payload. Accepted: JPEG, PNG, WEBP, up to 5 MB each (`MAX_UPLOAD_MB`), at most 15 per product; the picker checks this before uploading and the server stays the authority (`FILE_TOO_LARGE`, `INVALID_IMAGE`, `IMAGE_LIMIT_REACHED`). Files go one request per image, so each succeeds or fails alone, with an "n/m" counter (the fetch API has no byte-level upload progress). On _create_, images are chosen first (reorderable) and uploaded after the product exists. On _edit_, every change applies immediately: upload, delete, reorder (the first image is the main one), alt text, and linking new uploads to one of the product's colors. Upload requests get a 60 s timeout instead of 10 s.
+
+### Known gaps and limits
+
+- **Bundles:** listed and editable for name, price, category/brand, attributes and status only. The bundle-items editor (`PUT /admin/products/{id}/bundle-items`) is not built, and bundles cannot be created from this page. Planned for a later phase.
+- **Variant price range** ("من X إلى Y") is shown on the edit page; the list shows "من X" because the list endpoint returns only `price_from`.
+- **No bulk actions**, and no category/brand management pages yet.
+- Brand selects load the first 100 brands (the backend's page-size cap).
+- Image reordering uses earlier/later buttons, not drag-and-drop.
+- The stock-adjust `reason` is not stored by the backend.
+- A page reload ends the admin session by design, so e2e tests navigate by clicking.
+
+## End-to-end tests
+
+`npm run test:e2e` runs against the **real backend on a separate database**, never the dev one. Start a second backend instance on port 8001 on `lamsa_test` by overriding the environment (no `.env` change), from `../lamsa-backend`:
+
+```powershell
+$env:DB_NAME="lamsa_test"; $env:MEDIA_ROOT="<a temp folder>"; $env:MEDIA_URL="http://127.0.0.1:8001/media"
+$env:PUSH_BACKEND="log"; $env:CACHE_ENABLED="false"; $env:CORS_ORIGINS="http://127.0.0.1:5174,http://localhost:5174"
+.\venv\Scripts\python.exe -m scripts.init_storage
+.\venv\Scripts\alembic.exe upgrade head
+.\venv\Scripts\python.exe -m scripts.seed_base
+.\venv\Scripts\uvicorn.exe app.main:app --port 8001 --no-proxy-headers
+```
+
+Playwright starts its own admin dev server on :5174 pointed at it. As in lamsa-web, `e2e/global-setup.ts` registers an `e2e-admin-…` account through the API and promotes it with `scripts.make_admin` (on `lamsa_test`); `global-teardown.ts` deletes every `e2e-` product and that account. The suite refuses to run against port 8000 or a database not ending in `_test`. If the backend on :8001 is down, the product tests skip. Overrides: `E2E_API_BASE_URL`, `E2E_MEDIA_BASE_URL`, `E2E_ADMIN_PORT`, `E2E_DB_NAME`.
 
 ## Authentication and token storage
 
@@ -107,7 +148,7 @@ src/
   messages/     ar.ts: every UI string, typed (Modern Standard Arabic)
   styles/       globals.css: brand tokens, fonts, shadcn mapping
 tests/          Vitest setup and unit tests
-e2e/            Playwright smoke tests
+e2e/            Playwright smoke + products tests
 ```
 
 ## Conventions

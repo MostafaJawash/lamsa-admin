@@ -1,11 +1,22 @@
 /**
- * features/products (المنتجات): business logic for this domain.
- *
- * Belongs here: TanStack Query hooks (queries, mutations, invalidation), zod form schemas,
- * mappers from API types to view models, and domain components used by the page.
- * The route component in src/pages/products only composes what lives here.
- *
- * Does not belong here: generic UI (src/components), the API client or formatting helpers
- * (src/lib), and anything owned by another domain.
+ * features/products (المنتجات): the admin product catalog.
+ * Query hooks and request functions, the form's zod schema and payload mapping, and the
+ * domain components used by src/pages/products.
  */
-export {};
+export { useDeleteProduct, useProduct, useProducts } from "./api";
+export { ProductFilters } from "./components/product-filters";
+export { ProductForm } from "./components/product-form";
+export { ProductsTable } from "./components/products-table";
+export {
+  StockAdjustDialog,
+  type StockTarget,
+} from "./components/stock-adjust-dialog";
+export {
+  DEFAULT_PARAMS,
+  PAGE_SIZE,
+  hasActiveFilters,
+  parseListParams,
+  toSearchParams,
+  type ListParams,
+} from "./list-filters";
+export type { AdminProduct, ProductListItem } from "./types";
