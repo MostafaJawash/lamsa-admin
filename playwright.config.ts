@@ -23,7 +23,22 @@ export default defineConfig({
     baseURL: `http://127.0.0.1:${PORT}`,
     trace: "on-first-retry",
   },
-  projects: [{ name: "chromium", use: { ...devices["Desktop Chrome"] } }],
+  projects: [
+    {
+      name: "chromium",
+      testIgnore: /mobile.spec.ts/,
+      use: { ...devices["Desktop Chrome"] },
+    },
+    {
+      // Phone width (375px, touch) on Chromium: the iPhone SE profile itself would need WebKit.
+      name: "mobile",
+      testMatch: /mobile.spec.ts/,
+      use: {
+        ...devices["Pixel 5"],
+        viewport: { width: 375, height: 667 },
+      },
+    },
+  ],
   webServer: {
     command: `npm run dev -- --host 127.0.0.1 --port ${PORT}`,
     url: `http://127.0.0.1:${PORT}/login`,
