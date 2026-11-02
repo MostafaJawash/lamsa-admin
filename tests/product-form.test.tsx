@@ -171,3 +171,76 @@ describe("create product form", () => {
     ).toBeInTheDocument();
   });
 });
+
+describe("catalog changes reach the product form", () => {
+  it("marks inactive categories and brands in the selects without hiding them", async () => {
+    mockBackend({
+      "GET /admin/categories": () => ({
+        body: [
+          {
+            id: 3,
+            name: "العناية بالبشرة",
+            slug: "skin",
+            parent_id: null,
+            is_active: true,
+            children: [
+              {
+                id: 4,
+                name: "الكريمات",
+                slug: "creams",
+                parent_id: 3,
+                is_active: false,
+                children: [],
+              },
+            ],
+          },
+          {
+            id: 5,
+            name: "العطور",
+            slug: "perfumes",
+            parent_id: null,
+            is_active: false,
+            children: [],
+          },
+        ],
+      }),
+      "GET /admin/brands": () => ({
+        body: {
+          items: [
+            { id: 2, name: "لمسة", slug: "lamsa", is_active: true },
+            { id: 3, name: "روز", slug: "rose", is_active: false },
+          ],
+          page: 1,
+          page_size: 100,
+          total: 2,
+        },
+      }),
+    });
+    renderRoutes(routes, "/products/new");
+    const category = await screen.findByRole("combobox", { name: /القسم/ });
+    await new Promise((resolve) => setTimeout(resolve, 100));
+    fireEvent.pointerDown(category, {
+      button: 0,
+      ctrlKey: false,
+      pointerType: "mouse",
+    });
+    expect(
+      (await screen.findAllByRole("option")).map((o) => o.textContent),
+    ).toEqual([
+      "العناية بالبشرة",
+      "العناية بالبشرة ‹ الكريمات (غير نشط)",
+      "العطور (غير نشط)",
+    ]);
+    fireEvent.keyDown(screen.getByRole("listbox"), { key: "Escape" });
+    await waitFor(() => expect(screen.queryByRole("listbox")).toBeNull());
+
+    fireEvent.pointerDown(screen.getByRole("combobox", { name: /الماركة/ }), {
+      button: 0,
+      ctrlKey: false,
+      pointerType: "mouse",
+    });
+    expect(
+      (await screen.findAllByRole("option")).map((o) => o.textContent),
+    ).toEqual(["بدون ماركة", "لمسة", "روز (غير نشط)"]);
+  });
+});

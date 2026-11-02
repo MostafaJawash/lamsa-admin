@@ -2,7 +2,7 @@
 
 Admin dashboard for the Lamsa beauty store. A separate project from the customer website (`../lamsa-web`); both use the same backend (`../lamsa-backend`, FastAPI). Arabic only, right-to-left.
 
-> Status: login, **Products** and **Orders** are built (see below). The other pages still show their Arabic title and a placeholder.
+> Status: login, **Products**, **Orders**, **Categories** and **Brands** are built (see below). The other pages still show their Arabic title and a placeholder.
 
 ## Stack
 
@@ -132,6 +132,55 @@ Items (image, name, variant, quantity, unit price and line total in the line's o
 - The at-a-glance counters are all-time, not date-filtered, and there is no dashboard page yet. Low stock (`GET /admin/products/low-stock`) is an inventory concern and is left to the products page or the dashboard.
 - Customer detail pages do not exist yet, so the customer is not linked.
 
+## Categories and brands (الأقسام والماركات)
+
+Routes: `/categories` (tree), `/categories/new`, `/categories/:id/edit`, and `/brands`. Code: `src/features/categories/`, `src/features/brands/` and `src/pages/categories|brands/`. Management only: the **Products page already consumes this data**, and nothing here changes what the backend returns to it.
+
+### The real model (lamsa-backend `app/modules/categories`, `brands`, `products/validation.py`)
+
+**Categories** are a **tree of at most two levels** (`GET /admin/categories` returns the whole nested tree, unpaginated, inactive ones included). A node has `name` (1–100), `slug`, `parent_id`, `description` (≤5000), `sort_order`, `is_active`, `image`, and `product_count` (its own products _plus its children's_).
+
+- **Slug:** `^[a-z0-9]+(-[a-z0-9]+)*$`, 2–120 characters; a taken explicit slug is `409 SLUG_TAKEN`. Left empty, the backend builds one from the name (it transliterates Arabic). The browser cannot, so the form suggests a slug only for latin names and otherwise leaves it empty with a note; editing never rewrites an existing slug.
+- **Parent rule** (`CATEGORY_DEPTH_EXCEEDED`): the parent must be a _top-level_ category and not the category itself, and a category that _has children_ cannot be moved under another. That is the whole cycle rule, so the parent select lists top-level categories only (minus the category itself) and is disabled for a category with children. Moving a category re-validates all its products against the new inherited definitions, so a move can be refused with an error naming the product.
+- **Delete:** only an empty category; otherwise `409 CATEGORY_NOT_EMPTY {children, products}` and the backend's own message ("أوقفه بدلًا من ذلك"). `is_active` is a real field, so deactivating is the convention.
+- **Image:** `PUT`/`DELETE /admin/categories/{id}/image` (one JPEG/PNG/WEBP, ≤5 MB).
+
+**Attributes** (`/admin/categories/{id}/attributes`) describe what a product _is_ (volume, skin type…) and are stored in the product's `attributes` object under their `key`. They are **per-category sub-resources, inherited by child categories** (a child may redefine a key; the child's definition wins). Fields: `key` (`^[a-z][a-z0-9_]{1,49}$`, unique per category, **immutable**), `label` (≤100), `type` (`text`, `number`, `select`, `multiselect`, `boolean`, `date`), `options` (required and non-empty for `select`/`multiselect`, forbidden otherwise), `unit` (≤20), `is_required`, `is_filterable` (storefront filter), `sort_order`.
+
+**Variant options** (`/admin/categories/{id}/variant-options`) are a **separate concept** (not a flag on attributes): they describe how the variants of a _variable_ product differ (color, size…) and are stored in each variant's `options`. Also per-category and inherited. Fields: `key`, `label`, `type` (`color` or `select`), `options`, `sort_order`. A **color** option has no preset list: each product picks a free color name plus a hex value, stored as `<key>_hex`. A **select** option may have a preset list, or none (free text).
+
+**What the backend does when definitions are in use** (this is what the UI handles):
+
+| Change                                                                   | Backend behaviour                                                                           |
+| ------------------------------------------------------------------------ | ------------------------------------------------------------------------------------------- |
+| Add an attribute, even a required one                                    | Allowed; existing products are _not_ re-validated (see "Flagged" below)                     |
+| Change an attribute's `type` while products use it                       | `409 ATTRIBUTE_IN_USE {key, products_count}`                                                |
+| Remove a select value that products use                                  | `409 OPTION_IN_USE {value, products_count}`                                                 |
+| Delete an attribute that products use                                    | `409 ATTRIBUTE_IN_USE`, unless `?force=true`, which **removes that key from every product** |
+| Change type / remove a value / delete a variant option that variants use | `409 VARIANT_OPTION_IN_USE` / `OPTION_IN_USE {…, variants_count}`; **no force flag**        |
+
+### Categories page
+
+An always-expanded tree list (parents, each followed by its indented children): name with thumbnail, slug, parent, status, product count (a parent's includes its children's), edit and delete. Delete confirms first and shows the backend's message with the child/product counts.
+
+Create and edit are **pages** (the attribute and option editors are rich). **Create saves only the basic fields, then opens the edit page**, because the image, attributes and variant options are sub-resources that need the new category's id (this differs from Products, which returns to the list). The edit page has: the basic fields (explicit Save, back to the list, unsaved-changes prompt), the image (applies immediately), the attributes and the variant options. Each list shows the category's own definitions with edit/delete, and the ones inherited from the parent read-only with a "موروث من القسم الأب" badge and a link to the parent's page. Add/edit use a dialog (key only on create). **Deleting an attribute that products use** shows the backend's refusal, then a separate, clearly worded confirmation ("will remove this value from N products") before the forced delete; variant options simply show the refusal with its count. There is no reorder endpoint: `sort_order` is a plain number, and lists are sorted by it.
+
+### Brands page
+
+Flat and paged (`page`, `q`, `status` in the URL). A brand has `name` (1–100), `slug` (same rules), `description` (≤5000), `is_own_brand`, `is_active`, `sort_order`, a `logo` and a `product_count`. Create/edit is a **dialog** (few fields); a logo chosen while creating is uploaded right after the brand is saved, and on edit it applies immediately. Delete confirms, and a brand with products shows `BRAND_HAS_PRODUCTS` with its count (deactivate instead).
+
+### How Products stays in sync
+
+The category and brand queries are shared with the products form (same query keys), and every mutation here invalidates them and the products lists, so edits show up in Products in the same browser session (otherwise they are cached for five minutes). The category and brand selects in the products form now mark inactive items with "(غير نشط)" (publishing there fails with `CATEGORY_INACTIVE`/`BRAND_INACTIVE`); they are still selectable.
+
+### Flagged, intentionally not changed in Products
+
+- **A required attribute added after products exist.** The backend does not re-validate or unpublish them. Products handles it correctly (editing such a product asks for the new field, and the backend's `MISSING_REQUIRED_ATTRIBUTE` is mapped to it), and an active product keeps selling meanwhile. Nothing to fix; just know that products created earlier are "incomplete" until edited.
+- The products **list filter** for category does not mark inactive categories (only the form's selects do).
+- Cached categories/brands are shared across tabs only after the five-minute window.
+- Moving a category can be refused because one product would become invalid; the backend's message is shown as a toast, and the product id from its details is not surfaced.
+- Low-stock, bulk actions and category reordering by drag-and-drop remain out of scope.
+
 ## End-to-end tests
 
 `npm run test:e2e` runs against the **real backend on a separate database**, never the dev one. Start a second backend instance on port 8001 on `lamsa_test` by overriding the environment (no `.env` change), from `../lamsa-backend`:
@@ -145,7 +194,7 @@ $env:PUSH_BACKEND="log"; $env:CACHE_ENABLED="false"; $env:CORS_ORIGINS="http://1
 .\venv\Scripts\uvicorn.exe app.main:app --port 8001 --no-proxy-headers
 ```
 
-Orders are created through the real customer flow (an `e2e-ord-` category and product made with the admin API, an `e2e-` customer who adds it to the cart and checks out; `e2e/support/orders.ts`). The backend has no order deletion, a product in an order cannot be deleted, and an account with orders is only anonymised, so **order cleanup is SQL-assisted**: every order id the run creates is recorded in a temp file (`lamsa-admin-e2e-orders.jsonl`), and `global-teardown.ts` deletes exactly those rows (items, totals and history cascade) with a small script run in the backend's venv, which asserts the database name ends in `_test`. Customers, products and the category are then removed through the API. A crashed run's record file is swept by the next run's setup.
+Orders are created through the real customer flow (an `e2e-ord-` category and product made with the admin API, an `e2e-` customer who adds it to the cart and checks out; `e2e/support/orders.ts`). The backend has no order deletion, a product in an order cannot be deleted, and an account with orders is only anonymised, so **order cleanup is SQL-assisted**: every order id the run creates is recorded in a temp file (`lamsa-admin-e2e-orders.jsonl`), and `global-teardown.ts` deletes exactly those rows (items, totals and history cascade) with a small script run in the backend's venv, which asserts the database name ends in `_test`. Customers, products and the category are then removed through the API. A crashed run's record file is swept by the next run's setup. The catalog spec (`e2e/catalog.spec.ts`) creates `e2e-` categories, attributes, variant options and brands through the UI and creates a product in the new category to check that its required attribute and color option appear; it needs no SQL (no orders), only the API sweep in `global-teardown.ts`.
 
 Playwright starts its own admin dev server on :5174 pointed at it. As in lamsa-web, `e2e/global-setup.ts` registers an `e2e-admin-…` account through the API and promotes it with `scripts.make_admin` (on `lamsa_test`); `global-teardown.ts` deletes every `e2e-` product and that account. The suite refuses to run against port 8000 or a database not ending in `_test`. If the backend on :8001 is down, the product tests skip. Overrides: `E2E_API_BASE_URL`, `E2E_MEDIA_BASE_URL`, `E2E_ADMIN_PORT`, `E2E_DB_NAME`.
 
@@ -182,7 +231,7 @@ src/
   messages/     ar.ts: every UI string, typed (Modern Standard Arabic)
   styles/       globals.css: brand tokens, fonts, shadcn mapping
 tests/          Vitest setup and unit tests
-e2e/            Playwright smoke, products and orders tests
+e2e/            Playwright smoke, products, orders and catalog tests
 ```
 
 ## Conventions

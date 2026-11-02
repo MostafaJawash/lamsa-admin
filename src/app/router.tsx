@@ -6,6 +6,10 @@ import { isAdminSession } from "@/lib/auth/session";
 import { BannersPage } from "@/pages/banners";
 import { BrandsPage } from "@/pages/brands";
 import { CategoriesPage } from "@/pages/categories";
+import {
+  CategoryCreatePage,
+  CategoryEditPage,
+} from "@/pages/categories/category-form-page";
 import { CustomersPage } from "@/pages/customers";
 import { DashboardPage } from "@/pages/dashboard";
 import { LoginPage } from "@/pages/login";
@@ -50,6 +54,8 @@ export const router = createBrowserRouter([
           { path: "products/new", element: <ProductCreatePage /> },
           { path: "products/:id/edit", element: <ProductEditPage /> },
           { path: "categories", element: <CategoriesPage /> },
+          { path: "categories/new", element: <CategoryCreatePage /> },
+          { path: "categories/:id/edit", element: <CategoryEditPage /> },
           { path: "brands", element: <BrandsPage /> },
           { path: "orders", element: <OrdersPage /> },
           { path: "orders/:id", element: <OrderDetailPage /> },

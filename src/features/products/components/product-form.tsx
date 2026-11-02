@@ -304,6 +304,9 @@ export function ProductForm({ product }: Props) {
                       {categoryOptions.map((option) => (
                         <SelectItem key={option.id} value={String(option.id)}>
                           {option.label}
+                          {option.inactive
+                            ? ` (${m.categories.inactiveSuffix})`
+                            : ""}
                         </SelectItem>
                       ))}
                     </SelectContent>
@@ -336,6 +339,9 @@ export function ProductForm({ product }: Props) {
                       {(brands.data ?? []).map((brand) => (
                         <SelectItem key={brand.id} value={String(brand.id)}>
                           {brand.name}
+                          {brand.is_active === false
+                            ? ` (${m.categories.inactiveSuffix})`
+                            : ""}
                         </SelectItem>
                       ))}
                     </SelectContent>

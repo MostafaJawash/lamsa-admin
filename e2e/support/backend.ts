@@ -200,3 +200,45 @@ export async function uploadProductImage(
   });
   if (!response.ok) throw new BackendError(response.status, "UPLOAD");
 }
+
+type CategoryTreeNode = {
+  id: number;
+  name: string;
+  children: CategoryTreeNode[];
+};
+
+/**
+ * Deletes categories (children first) and brands whose name starts with `prefix`; ones that
+ * still hold products are left alone. Run after the products are gone.
+ */
+export async function deleteCatalogByPrefix(
+  token: string,
+  prefix: string,
+): Promise<void> {
+  const tree = await call<CategoryTreeNode[]>("GET", "/admin/categories", {
+    token,
+  });
+  const matching = tree.flatMap((root) => [
+    ...root.children.filter((c) => c.name.startsWith(prefix)),
+    ...(root.name.startsWith(prefix) ? [root] : []),
+  ]);
+  for (const category of matching) {
+    try {
+      await call("DELETE", `/admin/categories/${category.id}`, { token });
+    } catch {
+      // not empty: leave it
+    }
+  }
+  const brands = await call<{ items: { id: number; name: string }[] }>(
+    "GET",
+    `/admin/brands?search=${encodeURIComponent(prefix)}&page_size=100`,
+    { token },
+  );
+  for (const brand of brands.items.filter((b) => b.name.startsWith(prefix))) {
+    try {
+      await call("DELETE", `/admin/brands/${brand.id}`, { token });
+    } catch {
+      // has products: leave it
+    }
+  }
+}
