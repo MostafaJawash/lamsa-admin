@@ -87,7 +87,7 @@ export function VariantsEditor({
                 {err("options")}
               </p>
             ) : null}
-            <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
               {definitions.map((def) => {
                 const id = `${base}-opt-${def.key}`;
                 const optionError = err(`options.${def.key}`);
@@ -151,7 +151,7 @@ export function VariantsEditor({
                 );
               })}
             </div>
-            <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
               <FormField
                 id={`${base}-price`}
                 label={t.price}
@@ -231,7 +231,7 @@ export function VariantsEditor({
               </FormField>
             </div>
             <div className="flex items-center justify-between">
-              <label className="flex items-center gap-2 text-sm">
+              <label className="flex items-center gap-2 text-sm max-md:min-h-11">
                 <Controller
                   control={control}
                   name={`${base}.is_active`}

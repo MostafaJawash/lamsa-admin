@@ -12,7 +12,7 @@ export function DashboardPage() {
     <section className="flex flex-col gap-4">
       <h1 className="font-display text-2xl font-bold">{m.dashboard.title}</h1>
       <StatCards />
-      <div className="grid gap-4 lg:grid-cols-2">
+      <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
         <RecentOrders />
         <LowStock />
       </div>

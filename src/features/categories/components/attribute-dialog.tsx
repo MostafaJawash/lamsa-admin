@@ -213,7 +213,7 @@ function AttributeForm({ categoryId, attribute, onClose }: Props) {
           />
         </FormField>
       ) : null}
-      <div className="grid gap-4 sm:grid-cols-2">
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
         <FormField id="attr-unit" label={t.unit} error={err("unit")}>
           <Input
             id="attr-unit"
@@ -232,7 +232,7 @@ function AttributeForm({ categoryId, attribute, onClose }: Props) {
           />
         </FormField>
       </div>
-      <label className="flex items-center gap-2 text-sm">
+      <label className="flex items-center gap-2 text-sm max-md:min-h-11">
         <Controller
           control={control}
           name="is_required"
@@ -242,7 +242,7 @@ function AttributeForm({ categoryId, attribute, onClose }: Props) {
         />
         {t.required}
       </label>
-      <label className="flex items-center gap-2 text-sm">
+      <label className="flex items-center gap-2 text-sm max-md:min-h-11">
         <Controller
           control={control}
           name="is_filterable"

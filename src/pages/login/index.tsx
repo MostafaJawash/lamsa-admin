@@ -51,7 +51,7 @@ export function LoginPage() {
   }
 
   return (
-    <main className="grid min-h-svh place-items-center p-4">
+    <main className="grid min-h-svh grid-cols-1 place-items-center p-4">
       <Card className="w-full max-w-sm">
         <CardHeader>
           <p className="font-display text-3xl font-bold text-brand">

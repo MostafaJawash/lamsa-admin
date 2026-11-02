@@ -70,7 +70,7 @@ export function StatCards() {
     return (
       <div
         data-testid="stat-cards-loading"
-        className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3"
+        className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3"
       >
         {Array.from({ length: 6 }, (_, i) => (
           <Skeleton key={i} className="h-20 rounded-xl" />
@@ -91,7 +91,7 @@ export function StatCards() {
     <div className="flex flex-col gap-2">
       <div
         data-testid="stat-cards"
-        className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3"
+        className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3"
       >
         {COUNTS.map(({ status, label }) => (
           <StatCard

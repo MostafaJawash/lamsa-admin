@@ -31,7 +31,7 @@ export function AttributeFields({ definitions }: Props) {
     );
 
   return (
-    <div className="grid gap-4 sm:grid-cols-2">
+    <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
       {definitions.map((def) => {
         const id = `attr-${def.key}`;
         const error = (
@@ -100,7 +100,7 @@ export function AttributeFields({ definitions }: Props) {
                         {(def.options ?? []).map((option) => (
                           <label
                             key={option}
-                            className="flex items-center gap-1.5 text-sm"
+                            className="flex items-center gap-1.5 text-sm max-md:min-h-11"
                           >
                             <input
                               type="checkbox"

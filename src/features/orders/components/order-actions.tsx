@@ -262,7 +262,7 @@ function CancelForm({
         />
       </FormField>
       {canKeepStock ? (
-        <label className="flex items-center gap-2 text-sm">
+        <label className="flex items-center gap-2 text-sm max-md:min-h-11">
           <input
             type="checkbox"
             checked={keepStock}

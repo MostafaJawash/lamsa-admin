@@ -223,7 +223,7 @@ export function ProductForm({ product }: Props) {
     <FormProvider {...form}>
       <form onSubmit={onSubmit} noValidate className="flex flex-col gap-4">
         <Section title={t.sections.basic}>
-          <div className="grid gap-4 sm:grid-cols-2">
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
             <FormField
               id="type"
               label={t.fields.type}
@@ -282,7 +282,7 @@ export function ProductForm({ product }: Props) {
           >
             <Textarea id="description" rows={4} {...register("description")} />
           </FormField>
-          <div className="grid gap-4 sm:grid-cols-2">
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
             <FormField
               id="category_id"
               label={`${t.fields.category} *`}
@@ -371,7 +371,7 @@ export function ProductForm({ product }: Props) {
               />
             </FormField>
           </div>
-          <label className="flex items-center gap-2 text-sm">
+          <label className="flex items-center gap-2 text-sm max-md:min-h-11">
             <Controller
               control={control}
               name="is_new"
@@ -387,7 +387,7 @@ export function ProductForm({ product }: Props) {
         </Section>
 
         <Section title={t.sections.pricing}>
-          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
             <FormField
               id="currency"
               label={t.fields.currency}
@@ -537,7 +537,7 @@ export function ProductForm({ product }: Props) {
         </Section>
 
         <Section title={t.sections.status}>
-          <label className="flex items-center gap-2 text-sm">
+          <label className="flex items-center gap-2 text-sm max-md:min-h-11">
             <Controller
               control={control}
               name="is_active"

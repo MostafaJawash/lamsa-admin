@@ -163,7 +163,7 @@ export function CategoryForm({ category }: Props) {
   return (
     <>
       <form onSubmit={submit} noValidate className="flex flex-col gap-4">
-        <div className="grid gap-4 sm:grid-cols-2">
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
           <FormField id="name" label={`${t.fields.name} *`} error={err("name")}>
             <Input
               id="name"
@@ -254,7 +254,7 @@ export function CategoryForm({ category }: Props) {
         >
           <Textarea id="description" rows={3} {...register("description")} />
         </FormField>
-        <label className="flex items-center gap-2 text-sm">
+        <label className="flex items-center gap-2 text-sm max-md:min-h-11">
           <Controller
             control={control}
             name="is_active"

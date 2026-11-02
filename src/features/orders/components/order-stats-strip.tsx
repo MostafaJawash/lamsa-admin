@@ -28,7 +28,7 @@ export function OrderStatsStrip({ params, onSelect }: Props) {
     <div
       role="group"
       aria-label={m.orders.stats.title}
-      className="grid gap-3 sm:grid-cols-3"
+      className="grid grid-cols-1 gap-3 sm:grid-cols-3"
     >
       {TILES.map(({ status, label }) => {
         const active = params.status === status;

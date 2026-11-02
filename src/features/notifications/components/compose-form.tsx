@@ -144,7 +144,7 @@ export function ComposeForm({ onSent }: Props) {
                 {(["all", "user"] as const).map((option) => (
                   <label
                     key={option}
-                    className="flex items-center gap-2 text-sm"
+                    className="flex items-center gap-2 text-sm max-md:min-h-11"
                   >
                     <input
                       type="radio"
@@ -230,7 +230,10 @@ export function ComposeForm({ onSent }: Props) {
           <legend className="text-sm font-medium">{t.fields.schedule}</legend>
           <div className="flex gap-4">
             {(["now", "later"] as const).map((option) => (
-              <label key={option} className="flex items-center gap-2 text-sm">
+              <label
+                key={option}
+                className="flex items-center gap-2 text-sm max-md:min-h-11"
+              >
                 <input type="radio" value={option} {...register("schedule")} />
                 {option === "now" ? t.fields.now : t.fields.later}
               </label>

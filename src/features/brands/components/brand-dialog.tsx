@@ -273,7 +273,7 @@ function BrandForm({
           }}
         />
       </div>
-      <label className="flex items-center gap-2 text-sm">
+      <label className="flex items-center gap-2 text-sm max-md:min-h-11">
         <Controller
           control={control}
           name="is_own_brand"
@@ -283,7 +283,7 @@ function BrandForm({
         />
         {t.fields.isOwnBrand}
       </label>
-      <label className="flex items-center gap-2 text-sm">
+      <label className="flex items-center gap-2 text-sm max-md:min-h-11">
         <Controller
           control={control}
           name="is_active"
