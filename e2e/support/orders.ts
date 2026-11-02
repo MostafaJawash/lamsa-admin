@@ -101,8 +101,12 @@ export async function cleanupRecorded(adminToken: string): Promise<void> {
     console.warn("e2e cleanup: could not delete orders", error);
     return; // keep the file so the next run retries
   }
-  for (const r of records)
-    if (r.kind === "customer") await deleteAccount(r.phone);
+  for (const r of records) {
+    if (r.kind !== "customer") continue;
+    // A customer deactivated by a test cannot log in to delete themselves: reactivate first.
+    await reactivate(adminToken, r.phone);
+    await deleteAccount(r.phone);
+  }
   try {
     await deleteProductsByPrefix(adminToken, "e2e-ord-");
   } catch {
@@ -119,10 +123,30 @@ export async function cleanupRecorded(adminToken: string): Promise<void> {
   rmSync(STATE_FILE, { force: true });
 }
 
+/** Reactivates an account by phone through the admin API (a no-op if it is active or gone). */
+async function reactivate(adminToken: string, phone: string): Promise<void> {
+  try {
+    const found = await call<{ items: { id: number; is_active: boolean }[] }>(
+      "GET",
+      `/admin/users?search=${encodeURIComponent(phone)}&role=customer`,
+      { token: adminToken },
+    );
+    for (const user of found.items.filter((u) => !u.is_active))
+      await call("PATCH", `/admin/users/${user.id}`, {
+        token: adminToken,
+        body: { is_active: true },
+      });
+  } catch {
+    // not found: nothing to reactivate
+  }
+}
+
 export type Fixture = {
   productId: number;
   productName: string;
   customerName: string;
+  /** The customer's E.164 phone (they log in with it and the PASSWORD of support/backend). */
+  phone: string;
   orderIds: number[];
   productToken: string;
 };
@@ -209,6 +233,7 @@ export async function createOrders(
     productId: product.id,
     productName,
     customerName,
+    phone,
     orderIds,
     productToken: adminToken,
   };

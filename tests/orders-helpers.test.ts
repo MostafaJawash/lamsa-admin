@@ -163,8 +163,10 @@ describe("address snapshot", () => {
     ).toEqual(["دمشق", "الحمرا", "5"]);
     expect(describeAddress(null, name)).toBeNull();
   });
-  it("has no customer page to link to yet", () => {
-    expect(customerHref(7)).toBeNull();
+  it("links an order's customer to their page (the placeholder returned null)", () => {
+    expect(customerHref(7)).toBe("/customers/7");
+    expect(customerHref(12345)).toBe("/customers/12345");
+    expect(customerHref(7)).not.toBeNull();
   });
 });
 

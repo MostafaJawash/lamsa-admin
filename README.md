@@ -2,7 +2,7 @@
 
 Admin dashboard for the Lamsa beauty store. A separate project from the customer website (`../lamsa-web`); both use the same backend (`../lamsa-backend`, FastAPI). Arabic only, right-to-left.
 
-> Status: login, **Products**, **Orders**, **Categories** and **Brands** are built (see below). The other pages still show their Arabic title and a placeholder.
+> Status: login, **Products**, **Orders**, **Categories**, **Brands** and **Customers** are built (see below). The other pages still show their Arabic title and a placeholder.
 
 ## Stack
 
@@ -130,7 +130,7 @@ Items (image, name, variant, quantity, unit price and line total in the line's o
 - **Map link:** the backend's `map_url` (Google Maps), as its README specifies for the admin. lamsa-web uses OpenStreetMap on the customer's own pages.
 - **Date filters are UTC** (the backend's rule; `date_to` is inclusive), up to three hours off Damascus time; the page says so next to the dates.
 - The at-a-glance counters are all-time, not date-filtered, and there is no dashboard page yet. Low stock (`GET /admin/products/low-stock`) is an inventory concern and is left to the products page or the dashboard.
-- Customer detail pages do not exist yet, so the customer is not linked.
+- The customer's name links to their page (`/customers/:id`).
 
 ## Categories and brands (الأقسام والماركات)
 
@@ -181,6 +181,36 @@ The category and brand queries are shared with the products form (same query key
 - Moving a category can be refused because one product would become invalid; the backend's message is shown as a toast, and the product id from its details is not surfaced.
 - Low-stock, bulk actions and category reordering by drag-and-drop remain out of scope.
 
+## Customers (العملاء)
+
+Routes: `/customers` (list) and `/customers/:id` (detail). Code: `src/features/customers/` (hooks, URL list state, labels, components) and `src/pages/customers/` (the pages also compose the orders feature for the order history and the address). **The Orders detail page's customer name now links here** (`customerHref(userId)` in `features/orders/address.ts` returns `/customers/:id`, and the page uses a router `<Link>`, so the in-memory session survives the click).
+
+### The real account model (lamsa-backend `app/modules/users`, `admin`)
+
+Customers and admins are **one user table**, told apart by `role` (`customer` or `admin`). A record has `name`, `phone` (E.164, unique, not verified: there is no SMS), `email` (optional), `auth_provider` (`phone` = phone + password, or `google` = signs in with Google and has no password), `must_change_password` (set after an admin password reset), `created_at`, `is_active`, `last_login_at` and, in the admin API, `orders_count`.
+
+The admin API is exactly four calls: `GET /admin/users` (`search`, `role`, `is_active`, `page`, `page_size`; **newest first only**; `search` matches part of the **name or phone, not the email**), `GET /admin/users/{id}`, `PATCH /admin/users/{id} {is_active?, role?}` and `POST /admin/users/{id}/reset-password`.
+
+What the backend does **not** give an admin: a customer's saved addresses (those exist only under `/users/me/addresses`, for the signed-in user), a per-customer orders endpoint (`GET /admin/orders` has no customer filter), a lifetime value or "last order" field, or any way to edit a customer's name, phone or email.
+
+### What an admin can do (and what this page deliberately does not)
+
+- **Deactivate / activate** (`PATCH is_active`), each behind a confirmation. Deactivating revokes all the customer's refresh tokens and blocks their access token immediately; login then fails with `403 ACCOUNT_DISABLED`. **Nothing else changes:** orders, addresses and the cart are untouched (the customer simply cannot sign in or order until reactivated). An admin cannot deactivate themselves (`CANNOT_MODIFY_SELF`).
+- **Reset password** (phone accounts only; Google accounts have no password and the page says so). This hands over a **live credential**, so after the normal dialog the admin must also **type the word «تأكيد»** before the button activates. The backend returns a 10-character temporary password **once**; the page shows it in a dialog (with a copy button) and keeps it in memory only: it is not cached by the query client (`gcTime: 0`), not logged and not stored, and it is cleared when the dialog closes. All the customer's sessions end and they must change it at next login (the profile then shows a "temporary password pending" badge).
+- **Not built, on purpose:** changing a user's `role`. `PATCH role` exists (it can promote or demote anyone), but managing who has admin access is security-sensitive and deserves its own explicit phase. This page is **scoped to `role=customer`**: the list always sends `role=customer` and has no role filter, so admins never appear, and opening `/customers/:id` for an admin's id shows the profile read-only with a notice and **no actions, orders or address lookups**. No editing of customer details is offered because the backend has no endpoint for it.
+
+### List
+
+Server-side pagination (20 per page); page, search and status are in the URL. Columns: name, phone, email (or "—"), registration date (Damascus time), order count (it comes with each row, so there are no per-row calls), account type, status and a details link. There is no sort control because the backend has only "newest first".
+
+### Detail
+
+- **Profile:** name, phone, email, registration date, **last login**, account type, status, order count, and the temporary-password badge.
+- **Order history:** found by searching `GET /admin/orders` for the customer's **phone digits** (a phone is unique, so this returns exactly their orders), newest first and paged, reusing the orders table (without the customer column): number, date, per-currency totals (never summed), status badge, each linking to the order. **Limitation:** the phone stored on an order is the one at the time it was placed, so orders from before a customer changed their number do not match. The page says so.
+- **Address:** because the live addresses are not exposed to admins, the page shows **the delivery address stored on the customer's latest order** (one extra request for that order), labelled "عنوان آخر طلب" with a note that it is an order's frozen snapshot and not the customer's current saved addresses.
+- **Actions:** as above, in a separate card.
+- A bad or unknown id shows a not-found state.
+
 ## End-to-end tests
 
 `npm run test:e2e` runs against the **real backend on a separate database**, never the dev one. Start a second backend instance on port 8001 on `lamsa_test` by overriding the environment (no `.env` change), from `../lamsa-backend`:
@@ -194,7 +224,7 @@ $env:PUSH_BACKEND="log"; $env:CACHE_ENABLED="false"; $env:CORS_ORIGINS="http://1
 .\venv\Scripts\uvicorn.exe app.main:app --port 8001 --no-proxy-headers
 ```
 
-Orders are created through the real customer flow (an `e2e-ord-` category and product made with the admin API, an `e2e-` customer who adds it to the cart and checks out; `e2e/support/orders.ts`). The backend has no order deletion, a product in an order cannot be deleted, and an account with orders is only anonymised, so **order cleanup is SQL-assisted**: every order id the run creates is recorded in a temp file (`lamsa-admin-e2e-orders.jsonl`), and `global-teardown.ts` deletes exactly those rows (items, totals and history cascade) with a small script run in the backend's venv, which asserts the database name ends in `_test`. Customers, products and the category are then removed through the API. A crashed run's record file is swept by the next run's setup. The catalog spec (`e2e/catalog.spec.ts`) creates `e2e-` categories, attributes, variant options and brands through the UI and creates a product in the new category to check that its required attribute and color option appear; it needs no SQL (no orders), only the API sweep in `global-teardown.ts`.
+Orders are created through the real customer flow (an `e2e-ord-` category and product made with the admin API, an `e2e-` customer who adds it to the cart and checks out; `e2e/support/orders.ts`). The backend has no order deletion, a product in an order cannot be deleted, and an account with orders is only anonymised, so **order cleanup is SQL-assisted**: every order id the run creates is recorded in a temp file (`lamsa-admin-e2e-orders.jsonl`), and `global-teardown.ts` deletes exactly those rows (items, totals and history cascade) with a small script run in the backend's venv, which asserts the database name ends in `_test`. Customers, products and the category are then removed through the API. A crashed run's record file is swept by the next run's setup. The customers spec (`e2e/customers.spec.ts`) reuses the same real-customer fixture and the same cleanup; the teardown reactivates a customer a test left deactivated before deleting the account (an inactive customer cannot log in to delete themselves). The catalog spec (`e2e/catalog.spec.ts`) creates `e2e-` categories, attributes, variant options and brands through the UI and creates a product in the new category to check that its required attribute and color option appear; it needs no SQL (no orders), only the API sweep in `global-teardown.ts`.
 
 Playwright starts its own admin dev server on :5174 pointed at it. As in lamsa-web, `e2e/global-setup.ts` registers an `e2e-admin-…` account through the API and promotes it with `scripts.make_admin` (on `lamsa_test`); `global-teardown.ts` deletes every `e2e-` product and that account. The suite refuses to run against port 8000 or a database not ending in `_test`. If the backend on :8001 is down, the product tests skip. Overrides: `E2E_API_BASE_URL`, `E2E_MEDIA_BASE_URL`, `E2E_ADMIN_PORT`, `E2E_DB_NAME`.
 
@@ -231,7 +261,7 @@ src/
   messages/     ar.ts: every UI string, typed (Modern Standard Arabic)
   styles/       globals.css: brand tokens, fonts, shadcn mapping
 tests/          Vitest setup and unit tests
-e2e/            Playwright smoke, products, orders and catalog tests
+e2e/            Playwright smoke, products, orders, catalog and customers tests
 ```
 
 ## Conventions

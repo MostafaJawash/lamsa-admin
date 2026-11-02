@@ -54,7 +54,7 @@ export function describeAddress(
     : null;
 }
 
-/** Customer detail pages do not exist yet; when they do, return their path here. */
-export function customerHref(_userId: number): string | null {
-  return null;
+/** The admin page of a customer (`/customers/:id`), from the user id every order carries. */
+export function customerHref(userId: number): string {
+  return `/customers/${userId}`;
 }

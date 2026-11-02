@@ -15,10 +15,17 @@ type Props = {
   rows: readonly OrderSummary[];
   loading: boolean;
   emptyMessage: string;
+  /** Hide the customer column (the customer's own page lists only their orders). */
+  hideCustomer?: boolean;
 };
 
 /** The orders list table. Each total is shown per currency and never added across currencies. */
-export function OrdersTable({ rows, loading, emptyMessage }: Props) {
+export function OrdersTable({
+  rows,
+  loading,
+  emptyMessage,
+  hideCustomer = false,
+}: Props) {
   const t = m.orders;
   const columns: Column<OrderSummary>[] = [
     {
@@ -104,7 +111,9 @@ export function OrdersTable({ rows, loading, emptyMessage }: Props) {
   ];
   return (
     <DataTable
-      columns={columns}
+      columns={
+        hideCustomer ? columns.filter((c) => c.key !== "customer") : columns
+      }
       rows={rows}
       rowKey={(order) => order.id}
       loading={loading}

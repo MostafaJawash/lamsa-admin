@@ -1,11 +1,28 @@
 /**
- * features/customers (العملاء): business logic for this domain.
+ * features/customers (العملاء): customer accounts as the admin API exposes them.
  *
- * Belongs here: TanStack Query hooks (queries, mutations, invalidation), zod form schemas,
- * mappers from API types to view models, and domain components used by the page.
- * The route component in src/pages/customers only composes what lives here.
- *
- * Does not belong here: generic UI (src/components), the API client or formatting helpers
- * (src/lib), and anything owned by another domain.
+ * The real model (see README): customers and admins share one user table (`role`); this page
+ * is scoped to `role=customer`. An admin can activate/deactivate a customer and reset a phone
+ * account's password; nothing else about an account is editable. Order history and the
+ * address of the latest order are composed in src/pages/customers from the orders feature.
  */
-export {};
+export { useCustomer, useCustomers } from "./api";
+export { CustomerActions } from "./components/customer-actions";
+export { CustomerFilters } from "./components/customer-filters";
+export { CustomerProfile } from "./components/customer-profile";
+export { CustomersTable } from "./components/customers-table";
+export {
+  accountTypeLabel,
+  canResetPassword,
+  isCustomerAccount,
+  phoneDigits,
+} from "./labels";
+export {
+  DEFAULT_PARAMS,
+  PAGE_SIZE,
+  hasActiveFilters,
+  parseListParams,
+  toSearchParams,
+  type ListParams,
+} from "./list-filters";
+export type { Customer } from "./types";

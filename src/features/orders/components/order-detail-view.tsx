@@ -1,4 +1,5 @@
 import type { ReactNode } from "react";
+import { Link } from "react-router";
 
 import { formatDateTime } from "@/lib/dates";
 import { m } from "@/messages";
@@ -24,7 +25,6 @@ function Card({ title, children }: { title: string; children: ReactNode }) {
 /** The whole order: items and totals on one side, customer/delivery/status on the other. */
 export function OrderDetailView({ order }: { order: OrderDetail }) {
   const t = m.orders.detail;
-  const href = customerHref(order.customer.user_id);
   return (
     <div className="flex flex-col gap-4">
       <div className="flex flex-wrap items-center gap-3">
@@ -72,13 +72,12 @@ export function OrderDetailView({ order }: { order: OrderDetail }) {
           </Card>
           <Card title={t.customer}>
             <div className="flex flex-col gap-0.5 text-sm">
-              {href ? (
-                <a href={href} className="font-medium hover:text-brand">
-                  {order.customer.name}
-                </a>
-              ) : (
-                <span className="font-medium">{order.customer.name}</span>
-              )}
+              <Link
+                to={customerHref(order.customer.user_id)}
+                className="font-medium hover:text-brand"
+              >
+                {order.customer.name}
+              </Link>
               <bdi dir="ltr" className="text-start text-ink-muted">
                 {order.customer.phone}
               </bdi>

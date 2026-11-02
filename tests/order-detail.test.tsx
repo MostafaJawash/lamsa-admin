@@ -62,6 +62,12 @@ describe("order detail", () => {
     expect(screen.getByText("الدفع عند الاستلام")).toBeInTheDocument();
   });
 
+  it("links the customer's name to their customer page", async () => {
+    await open();
+    const link = screen.getByRole("link", { name: "رنا الأحمد" });
+    expect(link).toHaveAttribute("href", "/customers/7");
+  });
+
   it("shows the carrier-paid note and per-currency totals as separate blocks, never summed", async () => {
     await open();
     expect(

@@ -5,6 +5,7 @@
  * `status.ts` and in the README.
  */
 export { useOrder, useOrders } from "./api";
+export { AddressCard } from "./components/address-card";
 export { OrderDetailView } from "./components/order-detail-view";
 export { OrderFilters } from "./components/order-filters";
 export { OrderStatsStrip } from "./components/order-stats-strip";

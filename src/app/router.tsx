@@ -11,6 +11,7 @@ import {
   CategoryEditPage,
 } from "@/pages/categories/category-form-page";
 import { CustomersPage } from "@/pages/customers";
+import { CustomerDetailPage } from "@/pages/customers/customer-detail-page";
 import { DashboardPage } from "@/pages/dashboard";
 import { LoginPage } from "@/pages/login";
 import { NotFoundPage } from "@/pages/not-found";
@@ -60,6 +61,7 @@ export const router = createBrowserRouter([
           { path: "orders", element: <OrdersPage /> },
           { path: "orders/:id", element: <OrderDetailPage /> },
           { path: "customers", element: <CustomersPage /> },
+          { path: "customers/:id", element: <CustomerDetailPage /> },
           { path: "banners", element: <BannersPage /> },
           { path: "notifications", element: <NotificationsPage /> },
           { path: "settings", element: <SettingsPage /> },
