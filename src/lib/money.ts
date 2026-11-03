@@ -109,3 +109,21 @@ export function normalizeAmount(amount: string): string | null {
   const minor = toMinor(amount);
   return minor === null ? null : fromMinor(minor);
 }
+
+/** `amount × quantity` as an amount string ("1500.00" × 3 -> "4500.00"); null when it is not an amount. */
+export function multiplyAmount(
+  amount: string,
+  quantity: number,
+): string | null {
+  const minor = toMinor(amount);
+  return minor === null || !Number.isInteger(quantity)
+    ? null
+    : fromMinor(minor * BigInt(quantity));
+}
+
+/** `a − b` as an amount string; null when either is not an amount. */
+export function subtractAmounts(a: string, b: string): string | null {
+  const x = toMinor(a);
+  const y = toMinor(b);
+  return x === null || y === null ? null : fromMinor(x - y);
+}

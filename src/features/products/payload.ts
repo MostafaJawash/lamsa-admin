@@ -4,6 +4,8 @@ import type {
 } from "@/features/categories";
 import { normalizeAmount } from "@/lib/money";
 
+import { buildBundleItems, bundleToFormItems } from "./bundle";
+
 import {
   isEmptyValue,
   type ProductFormValues,
@@ -68,6 +70,7 @@ export const EMPTY_FORM: ProductFormValues = {
   is_active: false,
   attributes: {},
   variants: [],
+  bundle_items: [],
 };
 
 function attributeToInput(value: unknown): unknown {
@@ -107,6 +110,7 @@ export function productToFormValues(product: AdminProduct): ProductFormValues {
       stock: String(variant.stock),
       is_active: variant.is_active,
     })),
+    bundle_items: bundleToFormItems(product),
   };
 }
 
@@ -190,6 +194,8 @@ export function buildCreatePayload(
     body.sale_price = optionalText(values.sale_price);
     if (values.type === "simple")
       body.stock = Number(values.stock.trim() || "0");
+    if (values.type === "bundle")
+      body.bundle_items = buildBundleItems(values.bundle_items);
   }
   return body;
 }

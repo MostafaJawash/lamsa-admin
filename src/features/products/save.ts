@@ -1,3 +1,4 @@
+import { buildBundleItems, bundleItemsChanged } from "./bundle";
 import {
   buildCreatePayload,
   buildUpdatePayload,
@@ -9,6 +10,7 @@ import {
   createProduct,
   patchVariant,
   removeVariant,
+  replaceBundleItems,
   updateProduct,
   uploadImage,
 } from "./requests";
@@ -94,17 +96,34 @@ export async function saveNewProduct(
 
 /**
  * Edit flow: PATCH the product, then (variable products) delete, patch and add variants
- * through their own endpoints. Images and stock are changed immediately elsewhere.
+ * through their own endpoints, or (bundles, when the list changed) PUT the whole contents.
+ * Images and stock are changed immediately elsewhere.
  */
 export async function saveExistingProduct(
   product: AdminProduct,
   values: ProductFormValues,
   definitions: Definitions,
 ): Promise<void> {
-  await updateProduct(
-    product.id,
-    buildUpdatePayload(values, definitions, product.is_active),
-  );
+  const body = buildUpdatePayload(values, definitions, product.is_active);
+  if (values.type === "bundle") {
+    const current = buildBundleItems(values.bundle_items);
+    const itemsChanged = bundleItemsChanged(
+      product.bundle_items.map(({ product_id, variant_id, quantity }) => ({
+        product_id,
+        variant_id,
+        quantity,
+      })),
+      current,
+    );
+    // Publishing needs the new contents, so activation waits until they are saved.
+    const activateAfter = itemsChanged && body.is_active === true;
+    if (activateAfter) delete body.is_active;
+    await updateProduct(product.id, body);
+    if (itemsChanged) await replaceBundleItems(product.id, current);
+    if (activateAfter) await updateProduct(product.id, { is_active: true });
+    return;
+  }
+  await updateProduct(product.id, body);
   if (values.type !== "variable") return;
   const diff = diffVariants(
     product.variants,

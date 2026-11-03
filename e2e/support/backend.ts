@@ -129,13 +129,17 @@ export async function deleteProductsByPrefix(
   token: string,
   prefix: string,
 ): Promise<number> {
-  const found = await call<Page<{ id: number; name: string }>>(
+  const found = await call<Page<{ id: number; name: string; type: string }>>(
     "GET",
     `/admin/products?q=${encodeURIComponent(prefix)}&page_size=100`,
     { token },
   );
   let removed = 0;
-  for (const product of found.items.filter((p) => p.name.startsWith(prefix))) {
+  // Bundles first: a product that is still a component cannot be deleted.
+  const matching = found.items
+    .filter((p) => p.name.startsWith(prefix))
+    .sort((a, b) => Number(b.type === "bundle") - Number(a.type === "bundle"));
+  for (const product of matching) {
     try {
       await call("DELETE", `/admin/products/${product.id}`, { token });
       removed += 1;

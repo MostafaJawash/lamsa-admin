@@ -38,6 +38,7 @@ import { buildProductSchema, type ProductFormValues } from "../schema";
 import { CURRENCIES, type AdminProduct } from "../types";
 import { variantPriceRange } from "../price";
 import { AttributeFields } from "./attribute-fields";
+import { BundleItemsEditor } from "./bundle-items-editor";
 import { ProductImages } from "./product-images";
 import { StagedImages } from "./staged-images";
 import { StockAdjustDialog, type StockTarget } from "./stock-adjust-dialog";
@@ -214,6 +215,10 @@ export function ProductForm({ product }: Props) {
     Object.entries(stockOverrides).map(([id, stock]) => [Number(id), stock]),
   );
   const simpleStock = stockOverrides.product ?? product?.stock ?? 0;
+  // The backend refuses a currency change while the bundle still holds components, so the
+  // contents must be emptied and saved first.
+  const currencyLocked =
+    editing && type === "bundle" && (product?.bundle_items.length ?? 0) > 0;
   const variantRange =
     editing && product
       ? variantPriceRange(product.variants, product.currency)
@@ -249,14 +254,13 @@ export function ProductForm({ product }: Props) {
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
-                      {(editing
-                        ? (["simple", "variable", "bundle"] as const)
-                        : (["simple", "variable"] as const)
-                      ).map((value) => (
-                        <SelectItem key={value} value={value}>
-                          {m.products.types[value]}
-                        </SelectItem>
-                      ))}
+                      {(["simple", "variable", "bundle"] as const).map(
+                        (value) => (
+                          <SelectItem key={value} value={value}>
+                            {m.products.types[value]}
+                          </SelectItem>
+                        ),
+                      )}
                     </SelectContent>
                   </Select>
                 )}
@@ -391,14 +395,24 @@ export function ProductForm({ product }: Props) {
             <FormField
               id="currency"
               label={t.fields.currency}
-              hint={editing ? t.currencyNote : undefined}
+              hint={
+                currencyLocked
+                  ? t.bundleCurrencyLocked
+                  : editing
+                    ? t.currencyNote
+                    : undefined
+              }
               error={err("currency")}
             >
               <Controller
                 control={control}
                 name="currency"
                 render={({ field }) => (
-                  <Select value={field.value} onValueChange={field.onChange}>
+                  <Select
+                    value={field.value}
+                    onValueChange={field.onChange}
+                    disabled={currencyLocked}
+                  >
                     <SelectTrigger id="currency" className="w-full">
                       <SelectValue />
                     </SelectTrigger>
@@ -487,9 +501,6 @@ export function ProductForm({ product }: Props) {
               {m.products.columns.price}: {variantRange}
             </p>
           ) : null}
-          {type === "bundle" ? (
-            <p className="text-sm text-ink-muted">{t.bundleNote}</p>
-          ) : null}
         </Section>
 
         {categoryValue ? (
@@ -516,6 +527,16 @@ export function ProductForm({ product }: Props) {
             ) : (
               <p className="text-sm text-ink-muted">{t.selectCategoryFirst}</p>
             )}
+          </Section>
+        ) : null}
+
+        {type === "bundle" ? (
+          <Section title={t.sections.bundle}>
+            <BundleItemsEditor
+              productId={product?.id}
+              currency={currency}
+              bundleStock={product?.bundle_stock}
+            />
           </Section>
         ) : null}
 

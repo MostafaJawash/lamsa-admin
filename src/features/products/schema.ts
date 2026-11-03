@@ -7,6 +7,8 @@ import type {
 import { isLowerAmount } from "@/lib/money";
 import { m } from "@/messages";
 
+import { BUNDLE_LIMITS, duplicateIndexes, parseQuantity } from "./bundle";
+
 import type { CurrencyCode } from "./types";
 
 /** Limits copied from the backend's Pydantic schemas (app/modules/products/schemas.py). */
@@ -45,6 +47,14 @@ const variantSchema = z.object({
   is_active: z.boolean(),
 });
 
+const bundleItemSchema = z.object({
+  product_id: z.number(),
+  variant_id: z.number().nullable(),
+  quantity: z.string(),
+  name: z.string(),
+  variant_label: z.string().nullable(),
+});
+
 const baseSchema = z.object({
   type: z.enum(["simple", "variable", "bundle"]),
   currency: z.enum(["SYP", "USD"]),
@@ -61,6 +71,7 @@ const baseSchema = z.object({
   is_active: z.boolean(),
   attributes: z.record(z.string(), z.unknown()),
   variants: z.array(variantSchema),
+  bundle_items: z.array(bundleItemSchema),
 });
 
 export type ProductFormValues = z.infer<typeof baseSchema>;
@@ -173,6 +184,18 @@ export function buildProductSchema({
       checkPrice(values.price, values.sale_price, []);
       if (values.type === "simple" && mode === "create")
         checkStock(values.stock, []);
+    }
+
+    if (values.type === "bundle") {
+      const b = m.products.bundle;
+      if (values.bundle_items.length > BUNDLE_LIMITS.maxItems)
+        fail(["bundle_items"], b.maxItems);
+      values.bundle_items.forEach((item, index) => {
+        if (parseQuantity(item.quantity) === null)
+          fail(["bundle_items", index, "quantity"], b.quantityInvalid);
+      });
+      for (const index of duplicateIndexes(values.bundle_items))
+        fail(["bundle_items", index], b.duplicate);
     }
 
     for (const def of attributes) {

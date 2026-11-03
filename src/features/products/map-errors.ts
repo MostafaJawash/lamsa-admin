@@ -3,6 +3,7 @@ import type { FieldPath, UseFormSetError } from "react-hook-form";
 import { ApiError, errorMessage, fieldErrors } from "@/lib/errors";
 import { m } from "@/messages";
 
+import { bundleRowError } from "./bundle";
 import type { ProductFormValues } from "./schema";
 
 const TOP_LEVEL_FIELDS = new Set([
@@ -44,6 +45,7 @@ function asRecord(details: unknown): Record<string, unknown> {
  *    such as `variants.0.price`;
  *  - INVALID_ATTRIBUTE_VALUE / UNKNOWN_ATTRIBUTE: `details: {key}`;
  *  - MISSING_REQUIRED_ATTRIBUTE: `details: {keys: [...]}`;
+ *  - INVALID_BUNDLE_ITEM / BUNDLE_CURRENCY_MISMATCH: `details: {index, reason?}`, attached to that bundle line;
  *  - SLUG_TAKEN / SKU_TAKEN: no field, the code names it.
  */
 export function applyApiError(
@@ -68,6 +70,12 @@ export function applyApiError(
       if (isFormField(field)) attach(field, text);
       else unmapped.push(text);
     }
+    return unmapped;
+  }
+
+  const row = bundleRowError(error);
+  if (row) {
+    attach(`bundle_items.${row.index}`, row.message);
     return unmapped;
   }
 

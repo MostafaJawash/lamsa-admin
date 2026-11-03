@@ -1,5 +1,6 @@
 import { api, unwrap } from "@/lib/api/client";
 
+import type { BundleItemBody } from "./bundle";
 import { PAGE_SIZE, type ListParams } from "./list-filters";
 import type {
   ProductCreateBody,
@@ -111,6 +112,16 @@ export function removeVariant(id: number, variantId: number) {
   return unwrap(
     api.DELETE("/admin/products/{product_id}/variants/{variant_id}", {
       params: { path: { product_id: id, variant_id: variantId } },
+    }),
+  );
+}
+
+/** Full replace of the bundle's contents (an empty list empties the bundle). */
+export function replaceBundleItems(id: number, items: BundleItemBody[]) {
+  return unwrap(
+    api.PUT("/admin/products/{product_id}/bundle-items", {
+      params: { path: { product_id: id } },
+      body: { items },
     }),
   );
 }
